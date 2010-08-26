@@ -41,6 +41,7 @@ create_document_test_() ->
 	    cushion_couch_api:create_document(
 	      Host, Port, Db, ?TEST_DOC(empty))))]).
 
+%% Test the most common document API
 document_test_() ->
     {Host, Port, Db} = conf(),
     Id = "test1",
@@ -73,6 +74,7 @@ document_test_() ->
 	  cushion_couch_api:delete_document(Host, Port, Db, Id, fake_rev()))]).
 
 
+%% Test the DB API
 %% Creation and deletion are already tested in setups and cleanups, here we just
 %% test the negative cases.
 create_database_test_() ->
