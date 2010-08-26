@@ -38,6 +38,21 @@ create_document_test_() ->
       [?_test(
 	 cushion_couch_api:create_document(Host, Port, Db, ?TEST_DOC(empty)))]).
 
+%% Creation and deletion are already tested in setups and cleanups, here we just
+%% test the negative cases.
+create_database_test_() ->
+    Host = get_host(),
+    Port = get_port(),
+    Db = get_db(),
+
+    standard_fixture(
+      [?_assertThrow(
+	  {couchdb_error, {412, _}},
+	  cushion_couch_api:create_db(Host, Port, Db)),
+       ?_assertThrow(
+	  {couchdb_error, {404, _}},
+	  cushion_couch_api:delete_db(Host, Port, "fake_db_shouldnt_exist"))]).
+
 %%%-------------------------------------------------------------------
 %%% Internals
 %%%-------------------------------------------------------------------
