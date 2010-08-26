@@ -41,6 +41,38 @@ create_document_test_() ->
 	    cushion_couch_api:create_document(
 	      Host, Port, Db, ?TEST_DOC(empty))))]).
 
+document_test_() ->
+    {Host, Port, Db} = conf(),
+    Id = "test1",
+    standard_fixture(
+      [
+       % Create a new document and get it
+       ?_test(cushion_couch_api:update_document(
+		Host, Port, Db, Id, ?TEST_DOC(empty))),
+       ?_test(cushion_couch_api:get_document(Host, Port, Db, Id)),
+
+       % Now, test get and update negative cases
+       ?_assertThrow(
+	  {couchdb_error, {409, _}},
+	  cushion_couch_api:update_document(
+	    Host, Port, Db, Id, ?TEST_DOC(empty))),
+       ?_assertThrow(
+	  {couchdb_error, {404, _}},
+	  cushion_couch_api:get_document(Host, Port, Db, "some_id")),
+
+       % XXX We cannot test positive delete cases yet
+       ?_assertThrow(
+	  {couchdb_error, {400, _}},
+	  cushion_couch_api:delete_document(Host, Port, Db, Id, "")),
+       ?_assertThrow(
+	  {couchdb_error, {404, _}},
+	  cushion_couch_api:delete_document(
+	    Host, Port, Db, "some_id", fake_rev())),
+       ?_assertThrow(
+	  {couchdb_error, {409, _}},
+	  cushion_couch_api:delete_document(Host, Port, Db, Id, fake_rev()))]).
+
+
 %% Creation and deletion are already tested in setups and cleanups, here we just
 %% test the negative cases.
 create_database_test_() ->
@@ -101,6 +133,10 @@ delete_db() ->
 
 test_doc(File, Line, empty) ->
     io_lib:format("{\"test_file\" : ~p, \"line\" : \"~p\"}", [File, Line]).
+
+%% Can actually be valid by chance, but that would be extreme bad luck.
+fake_rev() ->
+    "1-fe46b1a37e32aa544edb754885c0864b".
 
 %% XXX Configuration is hardcoded for now. The database cushion_tests must be
 %% created beforehand
