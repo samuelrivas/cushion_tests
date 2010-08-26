@@ -1,5 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% Copyright 2006, 2007, 2010 Samuel Rivas <samuelrivas@gmail.com>
+%%% Copyright 2010 Samuel Rivas <samuelrivas@gmail.com>
 %%%
 %%% This file is part of Cushion.
 %%%
