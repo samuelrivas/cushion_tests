@@ -25,3 +25,35 @@
 %%%-------------------------------------------------------------------
 -module(cushion_couch_api_test).
 
+-include_lib("eunit/include/eunit.hrl").
+
+-define(TEST_DOC(Opt), test_doc(?FILE, ?LINE, Opt)).
+
+create_document_test_() ->
+    Host = get_host(),
+    Port = get_port(),
+    Db = get_db(),
+
+    {setup,
+     fun() -> ok end,
+     fun(_) -> ok end,
+     [?_test(
+	 cushion_couch_api:create_document(Host, Port, Db, ?TEST_DOC(empty)))]}.
+
+%%%-------------------------------------------------------------------
+%%% Internals
+%%%-------------------------------------------------------------------
+
+test_doc(File, Line, empty) ->
+    io_lib:format("{\"test_file\" : ~p, \"line\" : \"~p\"}", [File, Line]).
+
+%% XXX Configuration is hardcoded for now. The database cushion_tests must be
+%% created beforehand
+get_host() ->
+    "localhost".
+
+get_port() ->
+    5984.
+
+get_db() ->
+    "cushion_tests".
