@@ -29,18 +29,22 @@
 
 -define(TEST_DOC(Opt), test_doc(?FILE, ?LINE, Opt)).
 
+%% Creating an auto-id document should never fail.
+%% XXX we cannot do finer tests until we have the response parser, so far we
+%% just execute the function as a smoke test
 create_document_test_() ->
     {Host, Port, Db} = conf(),
-
     standard_fixture(
-      [?_test(
-	 cushion_couch_api:create_document(Host, Port, Db, ?TEST_DOC(empty)))]).
+      [lists:duplicate(
+	 3,
+	 ?_test(
+	    cushion_couch_api:create_document(
+	      Host, Port, Db, ?TEST_DOC(empty))))]).
 
 %% Creation and deletion are already tested in setups and cleanups, here we just
 %% test the negative cases.
 create_database_test_() ->
     {Host, Port, Db} = conf(),
-
     standard_fixture(
       [?_assertThrow(
 	  {couchdb_error, {412, _}},
