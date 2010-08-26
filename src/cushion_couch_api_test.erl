@@ -30,9 +30,7 @@
 -define(TEST_DOC(Opt), test_doc(?FILE, ?LINE, Opt)).
 
 create_document_test_() ->
-    Host = get_host(),
-    Port = get_port(),
-    Db = get_db(),
+    {Host, Port, Db} = conf(),
 
     standard_fixture(
       [?_test(
@@ -41,9 +39,7 @@ create_document_test_() ->
 %% Creation and deletion are already tested in setups and cleanups, here we just
 %% test the negative cases.
 create_database_test_() ->
-    Host = get_host(),
-    Port = get_port(),
-    Db = get_db(),
+    {Host, Port, Db} = conf(),
 
     standard_fixture(
       [?_assertThrow(
@@ -104,6 +100,9 @@ test_doc(File, Line, empty) ->
 
 %% XXX Configuration is hardcoded for now. The database cushion_tests must be
 %% created beforehand
+conf() ->
+    {get_host(), get_port(), get_db()}.
+
 get_host() ->
     "localhost".
 
