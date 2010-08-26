@@ -34,15 +34,55 @@ create_document_test_() ->
     Port = get_port(),
     Db = get_db(),
 
-    {setup,
-     fun() -> ok end,
-     fun(_) -> ok end,
-     [?_test(
-	 cushion_couch_api:create_document(Host, Port, Db, ?TEST_DOC(empty)))]}.
+    standard_fixture(
+      [?_test(
+	 cushion_couch_api:create_document(Host, Port, Db, ?TEST_DOC(empty)))]).
 
 %%%-------------------------------------------------------------------
 %%% Internals
 %%%-------------------------------------------------------------------
+
+standard_fixture(Test) ->
+    {setup, fun standard_setup/0, fun standard_cleanup/1, Test}.
+
+standard_setup() ->
+    Apps = start(cushion),
+    create_db(),
+    Apps.
+
+standard_cleanup(Apps) ->
+    delete_db(),
+    lists:foreach(
+      fun(App) -> application:stop(App) end,
+      Apps).
+
+start(App) ->
+    lists:flatten(start(App, 30)).
+
+start(_, 0) ->
+    throw(too_much_recursion);
+start(App, N) ->
+    case application:start(App) of
+	{error, {already_started, App}} ->
+	    [];
+        {error, {not_started, OtherApp}} ->
+            [start(OtherApp, N - 1),
+             start(App, N - 1)];
+        ok ->
+            [App]
+    end.
+
+create_db() ->
+    % Tentatively delete the tests database just in case
+    try delete_db()
+    catch
+	{couchdb_error, {404, _}} ->
+	    ok
+    end,
+    cushion_couch_api:create_db(get_host(), get_port(), get_db()).
+
+delete_db() ->
+    cushion_couch_api:delete_db(get_host(), get_port(), get_db()).
 
 test_doc(File, Line, empty) ->
     io_lib:format("{\"test_file\" : ~p, \"line\" : \"~p\"}", [File, Line]).
