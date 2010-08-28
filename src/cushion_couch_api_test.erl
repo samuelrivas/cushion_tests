@@ -21,8 +21,19 @@
 %%% @copyright (C) 2010, Samuel
 %%% @doc Tests for cushion's cushion_couch_api module
 %%%
+%%% <b>Preconditions:</b>
+%%% <ul>
+%%% <li>There must an started couchdb instance listening in
+%%% `get_host():get_port().' Right now, those values are hardcoded to "localhost"
+%%% and 5984, and there are not any plans of making them configurable unless
+%%% needed.</li>
+%%% <li>A database called <i>`cushion_tests' must not exist.</i> Beware, if it
+%%% exists it will be mercilessly deleted!</li> </ul>
+%%%
+%%% <b>Running:</b> simply evaluate `cushion_couch_api_test:test(),' it will
+%%% start all required applications, and stop them after each test.
 %%% @end
-%%%-------------------------------------------------------------------
+%%% -------------------------------------------------------------------
 -module(cushion_couch_api_test).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -95,7 +106,7 @@ standard_fixture(Test) ->
     {setup, fun standard_setup/0, fun standard_cleanup/1, Test}.
 
 standard_setup() ->
-    Apps = start(cushion),
+    Apps = cushion_util:start_app(cushion),
     create_db(),
     Apps.
 
@@ -104,22 +115,6 @@ standard_cleanup(Apps) ->
     lists:foreach(
       fun(App) -> application:stop(App) end,
       Apps).
-
-start(App) ->
-    lists:flatten(start(App, 30)).
-
-start(_, 0) ->
-    throw(too_much_recursion);
-start(App, N) ->
-    case application:start(App) of
-	{error, {already_started, App}} ->
-	    [];
-        {error, {not_started, OtherApp}} ->
-            [start(OtherApp, N - 1),
-             start(App, N - 1)];
-        ok ->
-            [App]
-    end.
 
 create_db() ->
     % Tentatively delete the tests database just in case
