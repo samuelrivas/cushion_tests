@@ -33,10 +33,13 @@
 
 %% This generator mimics ktuo (ktj_encode) documentation
 in_value() ->
-    eqc_gen:oneof([in_bool(), in_string()]).
+    eqc_gen:oneof([in_bool(), in_string(), in_number()]).
 
 in_string() ->
     ?LET(S, eqc_gen:list(printable()), list_to_binary(S)).
+
+in_number() ->
+    eqc_gen:oneof([eqc_gen:int(), eqc_gen:real()]).
 
 printable() ->
     in_intervals([{32, 126}, {8, 13}, {27, 27}]).
