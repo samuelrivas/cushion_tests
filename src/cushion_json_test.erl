@@ -33,7 +33,16 @@
 
 %% This generator mimics ktuo (ktj_encode) documentation
 in_value() ->
-    eqc_gen:oneof([in_bool()]).
+    eqc_gen:oneof([in_bool(), in_string()]).
+
+in_string() ->
+    ?LET(S, eqc_gen:list(printable()), list_to_binary(S)).
+
+printable() ->
+    in_intervals([{32, 126}, {8, 13}, {27, 27}]).
+
+in_intervals(Intervals) ->
+    eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
 
 in_bool() ->
     eqc_gen:elements([false, true]).
