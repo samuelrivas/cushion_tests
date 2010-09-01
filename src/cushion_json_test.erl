@@ -33,7 +33,18 @@
 
 %% This generator mimics ktuo (ktj_encode) documentation
 in_value() ->
-    eqc_gen:oneof([in_bool(), in_string(), in_number()]).
+    ?SIZED(S, in_value(S)).
+
+in_value(0) ->
+    eqc_gen:oneof(terminals());
+in_value(S) ->
+    eqc_gen:oneof(terminals() ++ composites(S)).
+
+terminals() ->
+    [in_bool(), in_string(), in_number()].
+
+composites(S) ->
+    [in_array(S)].
 
 in_string() ->
     ?LET(S, eqc_gen:list(printable()), list_to_binary(S)).
@@ -49,6 +60,18 @@ in_intervals(Intervals) ->
 
 in_bool() ->
     eqc_gen:elements([false, true]).
+
+%% XXX There is a problem with ktuo and empty arrays, they decode to [], exactly
+%% the same as empty strings.
+%%
+%% 51> ktj_decode:decode([]).
+%% {[],[],{0,0}}
+%% 52> ktj_decode:decode("\"\"").
+%% {[],[],{0,2}}
+%%
+%% For now, we'll just avoid generating empty arrays and fix that later
+in_array(S) ->
+    eqc_gen:non_empty(eqc_gen:list(in_value(S div 2))).
 
 %%%-------------------------------------------------------------------
 %%% Properties
