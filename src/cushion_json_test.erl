@@ -41,7 +41,7 @@ in_value(S) ->
     eqc_gen:oneof(terminals() ++ composites(S)).
 
 terminals() ->
-    [in_bool(), in_string(), in_number()].
+    [in_bool(), in_string(), in_number(), in_null()].
 
 composites(S) ->
     [in_array(S)].
@@ -63,6 +63,9 @@ in_bool() ->
 
 in_array(S) ->
     eqc_gen:list(in_value(S div 2)).
+
+in_null() ->
+    null.
 
 %%%-------------------------------------------------------------------
 %%% Properties
