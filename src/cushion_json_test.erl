@@ -61,17 +61,8 @@ in_intervals(Intervals) ->
 in_bool() ->
     eqc_gen:elements([false, true]).
 
-%% XXX There is a problem with ktuo and empty arrays, they decode to [], exactly
-%% the same as empty strings.
-%%
-%% 51> ktj_decode:decode([]).
-%% {[],[],{0,0}}
-%% 52> ktj_decode:decode("\"\"").
-%% {[],[],{0,2}}
-%%
-%% For now, we'll just avoid generating empty arrays and fix that later
 in_array(S) ->
-    eqc_gen:non_empty(eqc_gen:list(in_value(S div 2))).
+    eqc_gen:list(in_value(S div 2)).
 
 %%%-------------------------------------------------------------------
 %%% Properties
