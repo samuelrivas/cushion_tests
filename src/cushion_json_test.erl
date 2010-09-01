@@ -44,7 +44,7 @@ terminals() ->
     [in_bool(), in_string(), in_number(), in_null()].
 
 composites(S) ->
-    [in_array(S)].
+    [in_array(S), in_object(S)].
 
 in_string() ->
     ?LET(S, eqc_gen:list(printable()), list_to_binary(S)).
@@ -66,6 +66,12 @@ in_array(S) ->
 
 in_null() ->
     null.
+
+in_object(S) ->
+    ?LET(Fields, eqc_gen:list(field(S div 2)), {obj, Fields}).
+
+field(S) ->
+    {in_string(), in_value(S)}.
 
 %%%-------------------------------------------------------------------
 %%% Properties
