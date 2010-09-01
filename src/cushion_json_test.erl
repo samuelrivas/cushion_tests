@@ -52,23 +52,24 @@ in_string() ->
 in_number() ->
     eqc_gen:oneof([eqc_gen:int(), eqc_gen:real()]).
 
+in_bool() ->
+    eqc_gen:elements([false, true]).
+
+in_null() ->
+    null.
+
+in_array(S) ->
+    eqc_gen:list(in_value(S div 2)).
+
+in_object(S) ->
+    ?LET(Fields, eqc_gen:list(field(S div 2)), {obj, Fields}).
+
+%% Auxiliary generators
 printable() ->
     in_intervals([{32, 126}, {8, 13}, {27, 27}]).
 
 in_intervals(Intervals) ->
     eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
-
-in_bool() ->
-    eqc_gen:elements([false, true]).
-
-in_array(S) ->
-    eqc_gen:list(in_value(S div 2)).
-
-in_null() ->
-    null.
-
-in_object(S) ->
-    ?LET(Fields, eqc_gen:list(field(S div 2)), {obj, Fields}).
 
 field(S) ->
     {in_string(), in_value(S)}.
