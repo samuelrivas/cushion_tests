@@ -58,11 +58,19 @@ in_bool() ->
 in_null() ->
     null.
 
+%% Arrays shrink to the terms they contain
 in_array(S) ->
-    eqc_gen:list(in_value(S div 2)).
+    ?LETSHRINK(
+       L, eqc_gen:list(in_value(S div 2)), L).
 
+%% Objects shrink to one of their field values or field names, otherwise deeply
+%% nested object with a failing case in them would be difficult to debug.
 in_object(S) ->
-    ?LET(Fields, eqc_gen:list(field(S div 2)), {obj, Fields}).
+    ?LET(
+       Fields, eqc_gen:list(field(S div 2)),
+       ?SHRINK(
+          {obj, Fields},
+          [V || {_K, V} <- Fields] ++ [K || {K, _V} <- Fields])).
 
 %% Auxiliary generators
 printable() ->
