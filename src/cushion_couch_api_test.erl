@@ -86,9 +86,16 @@ document_test_() ->
 
 
 %% Test the DB API
-%% Creation and deletion are already tested in setups and cleanups, here we just
-%% test the negative cases.
-create_database_test_() ->
+%% Creation and deletion are already tested in setups and cleanups
+get_dbs_test_() ->
+    {Host, Port, _Db} = conf(),
+    standard_fixture(
+      [
+       % This is just a smoke test for now
+       ?_test(cushion_couch_api:get_dbs(Host, Port))
+      ]).
+
+create_database_negative_test_() ->
     {Host, Port, Db} = conf(),
     standard_fixture(
       [?_assertThrow(
