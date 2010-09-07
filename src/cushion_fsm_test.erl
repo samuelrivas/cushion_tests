@@ -127,14 +127,18 @@ precondition(_From,_To,_S,{call,_,_,_}) ->
 
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state_data(From,To,S,_,<command>)
-postcondition(init_state,access_created,_S,{call,_,new_access,_},Res) ->
+postcondition(init_state, access_created,_S,{call,_,new_access,_},Res) ->
     case Res of
         {error, _} ->
             false;
         _ ->
             true
     end;
-postcondition(access_created, db_created,_S,{call,_,create_db,_},Res) ->
+postcondition(access_created, got_existing_dbs, _S, {call,_,get_dbs, _}, Res) ->
+    is_list(Res);
+postcondition(got_existing_dbs, db_created,_S,{call,_,create_db,_},Res) ->
+    Res == ok;
+postcondition(db_created, got_existing_dbs,_S,{call,_,delete_db,_},Res) ->
     Res == ok;
 postcondition(db_created, access_created, _S,{call,_,delete_db,_},Res) ->
     Res == ok.
@@ -147,8 +151,8 @@ weight(_From,_To,{call,_,_,_}) ->
 %%%-------------------------------------------------------------------
 %%% Wrappers
 %%%-------------------------------------------------------------------
-new_access(_Host, _Port) ->
-    ok.
+new_access(Host, Port) ->
+    cushion:new_access(Host, Port).
 
 get_dbs(Access) ->
     cushion:get_dbs(Access).
