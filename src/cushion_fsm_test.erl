@@ -63,13 +63,16 @@
 %%% generators
 %%%-------------------------------------------------------------------
 db_name() ->
-    eqc_gen:non_empty(eqc_gen:list(printable())).
+    ?LET(
+       H, eqc_gen:choose($a, $z),
+       ?LET(T, eqc_gen:list(db_name_char()), [H | T])).
 
-printable() ->
-    in_intervals([{32, 126}, {8, 13}, {27, 27}]).
-
-in_intervals(Intervals) ->
-    eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
+%% XXX according to the documentation, couchdb should accept + as db name
+%% character, but right now that's failing unless + is encoded as %2B. Also /
+%% must be encoded to %2F, that's not yet implemented.
+db_name_char() ->
+    eqc_gen:elements(
+      lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"])).
 
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
@@ -111,12 +114,10 @@ initial_state_data() ->
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
-next_state_data(init_state,access_created,S,V,{call,_,new_access,_}) ->
+next_state_data(_,_,S,V,{call,_,new_access,_}) ->
     S#state{access = V};
-next_state_data(access_created,db_created,S,V,{call,_,create_db,_}) ->
-    S#state{db = V};
-next_state_data(db_created,access_created,S,V,{call,_,delete_db,_}) ->
-    S#state{db = V};
+next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
+    S#state{db = Db};
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -157,11 +158,11 @@ new_access(Host, Port) ->
 get_dbs(Access) ->
     cushion:get_dbs(Access).
 
-create_db(_Access, _Name) ->
-    ok.
+create_db(Access, Name) ->
+    cushion:create_db(Access, Name).
 
-delete_db(_Access, _Name) ->
-    ok.
+delete_db(Access, Name) ->
+    cushion:delete_db(Access, Name).
 
 %%%-------------------------------------------------------------------
 %%% Properties
@@ -169,7 +170,9 @@ delete_db(_Access, _Name) ->
 prop_cushion() ->
     ?FORALL(Cmds,commands(?MODULE),
             begin
+                Dbs = cushion:get_dbs(default_access()),
                 {H,S,Res} = run_commands(?MODULE,Cmds),
+                restore_dbs(Dbs),
                 ?WHENFAIL(
                    io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
                    Res == ok)
@@ -178,8 +181,32 @@ prop_cushion() ->
 %%%-------------------------------------------------------------------
 %%% Internals
 %%%-------------------------------------------------------------------
+default_host() ->
+    "localhost".
+
 default_port() ->
     5984.
 
-default_host() ->
-    "localhost".
+default_access() ->
+    cushion:new_access(default_host(), default_port()).
+
+%% Delete all dbs but those present in BlackList (we need cushion:get_dbs/1 and
+%% cushion:delete_db/2 to be working here)
+restore_dbs(BlackList) ->
+    Access = default_access(),
+    Dbs = cushion:get_dbs(Access),
+    lists:foreach(
+      fun(Db) ->
+              case lists:member(Db, BlackList) of
+                  true ->
+                      ok;
+                  false ->
+                      try
+                          cushion:delete_db(Access, Db)
+                      catch
+                          {couchdb_error, {404, _}} ->
+                              ok
+                      end
+              end
+      end,
+      Dbs).
