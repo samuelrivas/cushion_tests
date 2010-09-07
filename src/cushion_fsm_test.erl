@@ -46,7 +46,7 @@
 -export([init_state/1, access_created/1, db_created/1]).
 
 %% Wrappers
--export([new_access/2, create_db/2, noop/0]).
+-export([new_access/2, create_db/2, delete_db/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -89,9 +89,11 @@ access_created(S) ->
      {db_created, {call, ?MODULE, create_db, [S#state.access, db_name()]}}
     ].
 
-db_created(_S) ->
+db_created(S) ->
+    Access = S#state.access,
+    Db = S#state.db,
     [
-     {db_created, {call, ?MODULE, noop, []}}
+     {access_created, {call, ?MODULE, delete_db, [Access, Db]}}
     ].
 
 %% Identify the initial state
@@ -107,6 +109,8 @@ initial_state_data() ->
 next_state_data(init_state,access_created,S,V,{call,_,new_access,_}) ->
     S#state{access = V};
 next_state_data(access_created,db_created,S,V,{call,_,create_db,_}) ->
+    S#state{db = V};
+next_state_data(db_created,access_created,S,V,{call,_,delete_db,_}) ->
     S#state{db = V};
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
@@ -127,8 +131,8 @@ postcondition(init_state,access_created,_S,{call,_,new_access,_},Res) ->
     end;
 postcondition(access_created, db_created,_S,{call,_,create_db,_},Res) ->
     Res == ok;
-postcondition(_From,_To,_S,{call,_,_,_},_Res) ->
-    true.
+postcondition(db_created, access_created, _S,{call,_,delete_db,_},Res) ->
+    Res == ok.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -144,7 +148,7 @@ new_access(_Host, _Port) ->
 create_db(_Access, _Name) ->
     ok.
 
-noop() ->
+delete_db(_Access, _Name) ->
     ok.
 
 %%%-------------------------------------------------------------------
