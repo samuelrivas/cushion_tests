@@ -43,10 +43,10 @@
          precondition/4, postcondition/5]).
 
 %% States
--export([init_state/1, access_created/1]).
+-export([init_state/1, access_created/1, db_created/1]).
 
 %% Wrappers
--export([new_access/2, noop/0]).
+-export([new_access/2, create_db/2, noop/0]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -55,8 +55,21 @@
 -include_lib("eqc/include/eqc_fsm.hrl").
 
 -record(state,{
-          access % cushion_access()
+          access,       % cushion_access()
+          db            % string()
          }).
+
+%%%-------------------------------------------------------------------
+%%% generators
+%%%-------------------------------------------------------------------
+db_name() ->
+    eqc_gen:non_empty(eqc_gen:list(printable())).
+
+printable() ->
+    in_intervals([{32, 126}, {8, 13}, {27, 27}]).
+
+in_intervals(Intervals) ->
+    eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
 
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
@@ -71,10 +84,15 @@ init_state(_S) ->
       {call,?MODULE,new_access,[default_host(), default_port()]}}
      ].
 
-access_created(_S) ->
+access_created(S) ->
     [
-     {access_created, {call, ?MODULE, noop, []}}
-     ].
+     {db_created, {call, ?MODULE, create_db, [S#state.access, db_name()]}}
+    ].
+
+db_created(_S) ->
+    [
+     {db_created, {call, ?MODULE, noop, []}}
+    ].
 
 %% Identify the initial state
 initial_state() ->
@@ -88,6 +106,8 @@ initial_state_data() ->
 %% S is the current state, From and To are state names
 next_state_data(init_state,access_created,S,V,{call,_,new_access,_}) ->
     S#state{access = V};
+next_state_data(access_created,db_created,S,V,{call,_,create_db,_}) ->
+    S#state{db = V};
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -105,6 +125,8 @@ postcondition(init_state,access_created,_S,{call,_,new_access,_},Res) ->
         _ ->
             true
     end;
+postcondition(access_created, db_created,_S,{call,_,create_db,_},Res) ->
+    Res == ok;
 postcondition(_From,_To,_S,{call,_,_,_},_Res) ->
     true.
 
@@ -117,6 +139,9 @@ weight(_From,_To,{call,_,_,_}) ->
 %%% Wrappers
 %%%-------------------------------------------------------------------
 new_access(_Host, _Port) ->
+    ok.
+
+create_db(_Access, _Name) ->
     ok.
 
 noop() ->
