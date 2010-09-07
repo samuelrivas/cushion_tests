@@ -43,10 +43,10 @@
          precondition/4, postcondition/5]).
 
 %% States
--export([init_state/1, access_created/1, db_created/1]).
+-export([init_state/1, access_created/1, got_existing_dbs/1, db_created/1]).
 
 %% Wrappers
--export([new_access/2, create_db/2, delete_db/2]).
+-export([new_access/2, get_dbs/1, create_db/2, delete_db/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -86,6 +86,11 @@ init_state(_S) ->
 
 access_created(S) ->
     [
+     {got_existing_dbs, {call, ?MODULE, get_dbs, [S#state.access]}}
+    ].
+
+got_existing_dbs(S) ->
+    [
      {db_created, {call, ?MODULE, create_db, [S#state.access, db_name()]}}
     ].
 
@@ -93,7 +98,7 @@ db_created(S) ->
     Access = S#state.access,
     Db = S#state.db,
     [
-     {access_created, {call, ?MODULE, delete_db, [Access, Db]}}
+     {got_existing_dbs, {call, ?MODULE, delete_db, [Access, Db]}}
     ].
 
 %% Identify the initial state
@@ -144,6 +149,9 @@ weight(_From,_To,{call,_,_,_}) ->
 %%%-------------------------------------------------------------------
 new_access(_Host, _Port) ->
     ok.
+
+get_dbs(Access) ->
+    cushion:get_dbs(Access).
 
 create_db(_Access, _Name) ->
     ok.
