@@ -54,7 +54,9 @@
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_fsm.hrl").
 
--record(state,{}).
+-record(state,{
+          access % cushion_access()
+         }).
 
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
@@ -80,10 +82,12 @@ initial_state() ->
 
 %% Initialize the state data
 initial_state_data() ->
-    [].
+    #state{}.
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
+next_state_data(init_state,access_created,S,V,{call,_,new_access,_}) ->
+    S#state{access = V};
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -94,6 +98,13 @@ precondition(_From,_To,_S,{call,_,_,_}) ->
 
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state_data(From,To,S,_,<command>)
+postcondition(init_state,access_created,_S,{call,_,new_access,_},Res) ->
+    case Res of
+        {error, _} ->
+            false;
+        _ ->
+            true
+    end;
 postcondition(_From,_To,_S,{call,_,_,_},_Res) ->
     true.
 
