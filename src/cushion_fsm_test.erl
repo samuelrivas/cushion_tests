@@ -43,10 +43,11 @@
          precondition/4, postcondition/5]).
 
 %% States
--export([init_state/1, access_created/1, got_existing_dbs/1, db_created/1]).
+-export([init_state/1, initialised/1, access_created/1, got_existing_dbs/1,
+         db_created/1]).
 
 %% Wrappers
--export([new_access/2, get_dbs/1, create_db/2, delete_db/2]).
+-export([initialise/1, new_access/2, get_dbs/1, create_db/2, delete_db/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -55,6 +56,7 @@
 -include_lib("eqc/include/eqc_fsm.hrl").
 
 -record(state,{
+          db_names,     % [string()]
           access,       % cushion_access()
           db            % string()
          }).
@@ -62,10 +64,19 @@
 %%%-------------------------------------------------------------------
 %%% generators
 %%%-------------------------------------------------------------------
+db_names() ->
+    eqc_gen:non_empty(eqc_gen:list(db_name())).
+
 db_name() ->
     ?LET(
        H, eqc_gen:choose($a, $z),
        ?LET(T, eqc_gen:list(db_name_char()), [H | T])).
+
+%% To favour repetition and, at the same time, look for possible broken
+%% character combinations, we generate a set of random names and use them
+%% through all fsm testing
+db_name(S) ->
+    eqc_gen:elements(S#state.db_names).
 
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
@@ -83,6 +94,11 @@ db_name_char() ->
 %% for the calls to make each transition.
 init_state(_S) ->
     [
+     {initialised, {call, ?MODULE, initialise, [db_names()]}}
+    ].
+
+initialised(_S) ->
+    [
      {access_created,
       {call,?MODULE,new_access,[default_host(), default_port()]}}
      ].
@@ -94,7 +110,7 @@ access_created(S) ->
 
 got_existing_dbs(S) ->
     [
-     {db_created, {call, ?MODULE, create_db, [S#state.access, db_name()]}}
+     {db_created, {call, ?MODULE, create_db, [S#state.access, db_name(S)]}}
     ].
 
 db_created(S) ->
@@ -114,6 +130,8 @@ initial_state_data() ->
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
+next_state_data(_,_,S,_V,{call,_,initialise,[DbNames]}) ->
+    S#state{db_names = DbNames};
 next_state_data(_,_,S,V,{call,_,new_access,_}) ->
     S#state{access = V};
 next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
@@ -128,7 +146,9 @@ precondition(_From,_To,_S,{call,_,_,_}) ->
 
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state_data(From,To,S,_,<command>)
-postcondition(init_state, access_created,_S,{call,_,new_access,_},Res) ->
+postcondition(init_state, initialised,_S,{call,_,_,_},_Res) ->
+    true;
+postcondition(initialised, access_created,_S,{call,_,new_access,_},Res) ->
     case Res of
         {error, _} ->
             false;
@@ -152,6 +172,12 @@ weight(_From,_To,{call,_,_,_}) ->
 %%%-------------------------------------------------------------------
 %%% Wrappers
 %%%-------------------------------------------------------------------
+
+%% XXX Does nothing, but we need this to insert the allowed db name set in the
+%% state, see next_state_data.
+initialise(_DbNames) ->
+    ok.
+
 new_access(Host, Port) ->
     cushion:new_access(Host, Port).
 
@@ -168,15 +194,16 @@ delete_db(Access, Name) ->
 %%% Properties
 %%%-------------------------------------------------------------------
 prop_cushion() ->
-    ?FORALL(Cmds,commands(?MODULE),
-            begin
-                Dbs = cushion:get_dbs(default_access()),
-                {H,S,Res} = run_commands(?MODULE,Cmds),
-                restore_dbs(Dbs),
-                ?WHENFAIL(
-                   io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
-                   Res == ok)
-            end).
+    Dbs = cushion:get_dbs(default_access()),
+    ?FORALL(
+       Cmds, commands(?MODULE),
+       begin
+           {H,S,Res} = run_commands(?MODULE,Cmds),
+           restore_dbs(Dbs),
+           ?WHENFAIL(
+              io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
+              Res == ok)
+       end).
 
 %%%-------------------------------------------------------------------
 %%% Internals
