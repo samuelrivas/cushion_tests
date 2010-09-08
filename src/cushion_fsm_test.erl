@@ -120,7 +120,7 @@ initial_state() ->
 
 %% Initialize the state data
 initial_state_data() ->
-    #state{dbs = []}.
+    #state{dbs = [], db_names = []}.
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
