@@ -43,7 +43,7 @@
          precondition/4, postcondition/5]).
 
 %% States
--export([init_state/1, initialised/1, access_created/1, ready/1]).
+-export([ready/1]).
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, delete_db/2]).
@@ -55,9 +55,10 @@
 -include_lib("eqc/include/eqc_fsm.hrl").
 
 -record(state,{
-          db_names,     % [string()]
-          access,       % cushion_access()
-          dbs           % [string()]
+          existing_dbs, % [string()], dbs already in couchdb
+          access,       % cushion_access(), the access to couchdb
+          db_names,     % [string()], a random set of valid db names
+          dbs           % [string()], dbs created in the test
          }).
 
 %%%-------------------------------------------------------------------
@@ -77,12 +78,14 @@ db_name() ->
 db_name(S) ->
     eqc_gen:elements(S#state.db_names).
 
+db_name_char() ->
+    eqc_gen:elements(valid_db_name_chars).
+
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
 %% must be encoded to %2F, that's not yet implemented.
-db_name_char() ->
-    eqc_gen:elements(
-      lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"])).
+valid_db_name_chars() ->
+      lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"]).
 
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
@@ -91,22 +94,6 @@ db_name_char() ->
 %% Definition of the states. Each state is represented by a function,
 %% listing the transitions from that state, together with generators
 %% for the calls to make each transition.
-init_state(_S) ->
-    [
-     {initialised, {call, ?MODULE, initialise, [db_names()]}}
-    ].
-
-initialised(_S) ->
-    [
-     {access_created,
-      {call,?MODULE,new_access,[default_host(), default_port()]}}
-     ].
-
-access_created(S) ->
-    [
-     {ready, {call, ?MODULE, get_dbs, [S#state.access]}}
-    ].
-
 ready(S) ->
     Access = S#state.access,
     [
@@ -116,11 +103,16 @@ ready(S) ->
 
 %% Identify the initial state
 initial_state() ->
-    init_state.
+    ready.
 
 %% Initialize the state data
 initial_state_data() ->
-    #state{dbs = [], db_names = []}.
+    Access = new_access(default_host(), default_port()),
+    Existing = get_dbs(Access),
+    #state{existing_dbs = Existing,
+           access = new_access(default_host(), default_port()),
+           db_names = generate_db_names(Existing),
+           dbs = []}.
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
@@ -261,3 +253,43 @@ restore_dbs(BlackList) ->
               end
       end,
       Dbs).
+
+%% Homebrew generator, since I didn't find out how to generate a list of valid
+%% db names out of quickcheck without complicating the code too much.
+%% We avoid generating a name that already exists in CouchDB
+generate_db_names(Existing) ->
+    random:seed(now()),
+    N = random:uniform(max_db_names()),
+    generate_names(valid_db_name_chars(), Existing, N).
+
+generate_names(_, _, 0) ->
+    [];
+generate_names(Chars, Existing, N) ->
+    Name = generate_name(Chars),
+    case lists:member(Name, Existing) of
+        true ->
+            generate_names(Chars, Existing, N);
+        false ->
+            [Name | generate_names(Chars, Existing, N - 1)]
+    end.
+
+generate_name(Chars) ->
+    Length = random:uniform(max_db_name_length()),
+    NChars = length(Chars),
+    generate_chars(NChars, Chars, Length).
+
+generate_chars(_, _, 0) ->
+    [];
+generate_chars(NChars, Chars, Length) ->
+    [lists:nth(random:uniform(NChars), Chars)
+     | generate_chars(NChars, Chars, Length - 1)].
+
+%% I don't think managing more than 5 dbs would add anything to the tests
+max_db_names() ->
+    5.
+
+%% Better somewhat longer, so that all valid characters have a chance to appear,
+%% longer names have poorer repetition, but we fix that restricting the set of
+%% names to generate and repeating them
+max_db_name_length() ->
+    10.
