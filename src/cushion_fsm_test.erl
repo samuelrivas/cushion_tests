@@ -43,7 +43,7 @@
          precondition/4, postcondition/5]).
 
 %% States
--export([init_state/1, initialised/1, access_created/1, got_existing_dbs/1]).
+-export([init_state/1, initialised/1, access_created/1, ready/1]).
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, delete_db/2]).
@@ -104,14 +104,14 @@ initialised(_S) ->
 
 access_created(S) ->
     [
-     {got_existing_dbs, {call, ?MODULE, get_dbs, [S#state.access]}}
+     {ready, {call, ?MODULE, get_dbs, [S#state.access]}}
     ].
 
-got_existing_dbs(S) ->
+ready(S) ->
     Access = S#state.access,
     [
-     {got_existing_dbs, {call, ?MODULE, create_db, [Access, db_name(S)]}},
-     {got_existing_dbs, {call, ?MODULE, delete_db, [Access, db_name(S)]}}
+     {ready, {call, ?MODULE, create_db, [Access, db_name(S)]}},
+     {ready, {call, ?MODULE, delete_db, [Access, db_name(S)]}}
     ].
 
 %% Identify the initial state
@@ -161,10 +161,9 @@ postcondition(initialised, access_created,_S,{call,_,new_access,_},Res) ->
         _ ->
             true
     end;
-postcondition(access_created, got_existing_dbs, _S, {call,_,get_dbs, _}, Res) ->
+postcondition(access_created, ready, _S, {call,_,get_dbs, _}, Res) ->
     is_list(Res);
-postcondition(
-  got_existing_dbs, got_existing_dbs,S, {call,_,create_db,[_Access,Db]},Res) ->
+postcondition(ready, ready,S, {call,_,create_db,[_Access,Db]},Res) ->
 
     Existed = lists:member(Db, S#state.dbs),
     case Res of
@@ -173,8 +172,7 @@ postcondition(
         {error, 412} ->
             Existed
     end;
-postcondition(
-  got_existing_dbs, got_existing_dbs,S,{call,_,delete_db,[_Access,Db]},Res) ->
+postcondition(ready, ready,S,{call,_,delete_db,[_Access,Db]},Res) ->
     Existed = lists:member(Db, S#state.dbs),
     case Res of
         ok ->
