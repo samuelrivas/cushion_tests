@@ -43,8 +43,7 @@
          precondition/4, postcondition/5]).
 
 %% States
--export([init_state/1, initialised/1, access_created/1, got_existing_dbs/1,
-         db_created/1]).
+-export([init_state/1, initialised/1, access_created/1, got_existing_dbs/1]).
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, delete_db/2]).
@@ -109,15 +108,10 @@ access_created(S) ->
     ].
 
 got_existing_dbs(S) ->
-    [
-     {got_existing_dbs, {call, ?MODULE, create_db, [S#state.access, db_name(S)]}}
-    ].
-
-db_created(S) ->
     Access = S#state.access,
-    Db = S#state.dbs,
     [
-     {got_existing_dbs, {call, ?MODULE, delete_db, [Access, Db]}}
+     {got_existing_dbs, {call, ?MODULE, create_db, [Access, db_name(S)]}},
+     {got_existing_dbs, {call, ?MODULE, delete_db, [Access, db_name(S)]}}
     ].
 
 %% Identify the initial state
@@ -134,10 +128,20 @@ next_state_data(_,_,S,_V,{call,_,initialise,[DbNames]}) ->
     S#state{db_names = DbNames};
 next_state_data(_,_,S,V,{call,_,new_access,_}) ->
     S#state{access = V};
-next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
-    S#state{dbs = [Db | S#state.dbs]};
-next_state_data(_,_,S,_V,{call,_,delete_db,[_, Db]}) ->
-    S#state{dbs =  lists:delete(Db, S#state.dbs)};
+next_state_data(_,_,S,V,{call,_,create_db,[_, Db]}) ->
+    case V of
+        ok ->
+            S#state{dbs = [Db | S#state.dbs]};
+        _ ->
+            S
+    end;
+next_state_data(_,_,S,V,{call,_,delete_db,[_, Db]}) ->
+    case V of
+        ok ->
+            S#state{dbs =  lists:delete(Db, S#state.dbs)};
+        _ ->
+            S
+    end;
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -160,7 +164,7 @@ postcondition(initialised, access_created,_S,{call,_,new_access,_},Res) ->
 postcondition(access_created, got_existing_dbs, _S, {call,_,get_dbs, _}, Res) ->
     is_list(Res);
 postcondition(
-  got_existing_dbs,got_existing_dbs,S, {call,_,create_db,[_Access,Db]},Res) ->
+  got_existing_dbs, got_existing_dbs,S, {call,_,create_db,[_Access,Db]},Res) ->
 
     Existed = lists:member(Db, S#state.dbs),
     case Res of
@@ -169,10 +173,15 @@ postcondition(
         {error, 412} ->
             Existed
     end;
-postcondition(db_created, got_existing_dbs,_S,{call,_,delete_db,_},Res) ->
-    Res == ok;
-postcondition(db_created, access_created, _S,{call,_,delete_db,_},Res) ->
-    Res == ok.
+postcondition(
+  got_existing_dbs, got_existing_dbs,S,{call,_,delete_db,[_Access,Db]},Res) ->
+    Existed = lists:member(Db, S#state.dbs),
+    case Res of
+        ok ->
+            Existed;
+        {error, 404} ->
+            not Existed
+    end.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -195,15 +204,17 @@ get_dbs(Access) ->
     cushion:get_dbs(Access).
 
 create_db(Access, Name) ->
-    try
-        cushion:create_db(Access, Name)
+    catch_error(fun() -> cushion:create_db(Access, Name) end).
+
+delete_db(Access, Name) ->
+    catch_error(fun() -> cushion:delete_db(Access, Name) end).
+
+catch_error(F) ->
+    try F()
     catch
         {couchdb_error, {Code, _}} ->
             {error, Code}
     end.
-
-delete_db(Access, Name) ->
-    cushion:delete_db(Access, Name).
 
 %%%-------------------------------------------------------------------
 %%% Properties
