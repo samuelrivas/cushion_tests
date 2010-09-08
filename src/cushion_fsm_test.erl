@@ -58,7 +58,7 @@
 -record(state,{
           db_names,     % [string()]
           access,       % cushion_access()
-          db            % string()
+          dbs           % [string()]
          }).
 
 %%%-------------------------------------------------------------------
@@ -110,12 +110,12 @@ access_created(S) ->
 
 got_existing_dbs(S) ->
     [
-     {db_created, {call, ?MODULE, create_db, [S#state.access, db_name(S)]}}
+     {got_existing_dbs, {call, ?MODULE, create_db, [S#state.access, db_name(S)]}}
     ].
 
 db_created(S) ->
     Access = S#state.access,
-    Db = S#state.db,
+    Db = S#state.dbs,
     [
      {got_existing_dbs, {call, ?MODULE, delete_db, [Access, Db]}}
     ].
@@ -126,7 +126,7 @@ initial_state() ->
 
 %% Initialize the state data
 initial_state_data() ->
-    #state{}.
+    #state{dbs = []}.
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
@@ -135,7 +135,9 @@ next_state_data(_,_,S,_V,{call,_,initialise,[DbNames]}) ->
 next_state_data(_,_,S,V,{call,_,new_access,_}) ->
     S#state{access = V};
 next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
-    S#state{db = Db};
+    S#state{dbs = [Db | S#state.dbs]};
+next_state_data(_,_,S,_V,{call,_,delete_db,[_, Db]}) ->
+    S#state{dbs =  lists:delete(Db, S#state.dbs)};
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -157,8 +159,16 @@ postcondition(initialised, access_created,_S,{call,_,new_access,_},Res) ->
     end;
 postcondition(access_created, got_existing_dbs, _S, {call,_,get_dbs, _}, Res) ->
     is_list(Res);
-postcondition(got_existing_dbs, db_created,_S,{call,_,create_db,_},Res) ->
-    Res == ok;
+postcondition(
+  got_existing_dbs,got_existing_dbs,S, {call,_,create_db,[_Access,Db]},Res) ->
+
+    Existed = lists:member(Db, S#state.dbs),
+    case Res of
+        ok ->
+            not Existed;
+        {error, 412} ->
+            Existed
+    end;
 postcondition(db_created, got_existing_dbs,_S,{call,_,delete_db,_},Res) ->
     Res == ok;
 postcondition(db_created, access_created, _S,{call,_,delete_db,_},Res) ->
@@ -185,7 +195,12 @@ get_dbs(Access) ->
     cushion:get_dbs(Access).
 
 create_db(Access, Name) ->
-    cushion:create_db(Access, Name).
+    try
+        cushion:create_db(Access, Name)
+    catch
+        {couchdb_error, {Code, _}} ->
+            {error, Code}
+    end.
 
 delete_db(Access, Name) ->
     cushion:delete_db(Access, Name).
