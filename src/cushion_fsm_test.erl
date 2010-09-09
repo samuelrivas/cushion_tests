@@ -216,9 +216,12 @@ prop_cushion() ->
        begin
            {H,S,Res} = run_commands(?MODULE,Cmds),
            restore_dbs(Dbs),
-           ?WHENFAIL(
-              io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
-              Res == ok)
+           aggregate(
+             eqc_statem:zip(
+               eqc_fsm:state_names(H),eqc_statem:command_names(Cmds)),
+             ?WHENFAIL(
+                io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
+                Res == ok))
        end).
 
 %%%-------------------------------------------------------------------
