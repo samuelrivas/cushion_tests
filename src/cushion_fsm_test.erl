@@ -55,18 +55,21 @@
 -include_lib("eqc/include/eqc_fsm.hrl").
 
 -record(state,{
-          existing_dbs, % [string()], dbs already in couchdb
-          access,       % cushion_access(), the access to couchdb
-          db_names,     % [string()], a random set of valid db names
-          dbs           % [string()], dbs created in the test
+          access = undefined_acces, % cushion_access(), the access to couchdb
+          db_names = [],            % [string()], a random set of valid db names
+          dbs = []                  % [string()], dbs created in the test
          }).
 
 %%%-------------------------------------------------------------------
 %%% generators
 %%%-------------------------------------------------------------------
-db_names() ->
-    eqc_gen:non_empty(eqc_gen:list(db_name())).
+db_names(Blacklist) ->
+    eqc_gen:non_empty(eqc_gen:list(blacklisted_db_name(Blacklist))).
 
+blacklisted_db_name(Blacklist) ->
+    ?SUCHTHAT(N, db_name(), not lists:member(N, Blacklist)).
+
+%% Generate names according to CouchDB name rules
 db_name() ->
     ?LET(
        H, eqc_gen:choose($a, $z),
@@ -79,7 +82,7 @@ db_name(S) ->
     eqc_gen:elements(S#state.db_names).
 
 db_name_char() ->
-    eqc_gen:elements(valid_db_name_chars).
+    eqc_gen:elements(valid_db_name_chars()).
 
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
@@ -107,19 +110,12 @@ initial_state() ->
 
 %% Initialize the state data
 initial_state_data() ->
-    Access = new_access(default_host(), default_port()),
-    Existing = get_dbs(Access),
-    #state{existing_dbs = Existing,
-           access = new_access(default_host(), default_port()),
-           db_names = generate_db_names(Existing),
+    #state{access = default_access(),
+           db_names = [],
            dbs = []}.
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
-next_state_data(_,_,S,_V,{call,_,initialise,[DbNames]}) ->
-    S#state{db_names = DbNames};
-next_state_data(_,_,S,V,{call,_,new_access,_}) ->
-    S#state{access = V};
 next_state_data(_,_,S,V,{call,_,create_db,[_, Db]}) ->
     case V of
         ok ->
@@ -144,17 +140,6 @@ precondition(_From,_To,_S,{call,_,_,_}) ->
 
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state_data(From,To,S,_,<command>)
-postcondition(init_state, initialised,_S,{call,_,_,_},_Res) ->
-    true;
-postcondition(initialised, access_created,_S,{call,_,new_access,_},Res) ->
-    case Res of
-        {error, _} ->
-            false;
-        _ ->
-            true
-    end;
-postcondition(access_created, ready, _S, {call,_,get_dbs, _}, Res) ->
-    is_list(Res);
 postcondition(ready, ready,S, {call,_,create_db,[_Access,Db]},Res) ->
 
     Existed = lists:member(Db, S#state.dbs),
@@ -210,19 +195,25 @@ catch_error(F) ->
 %%% Properties
 %%%-------------------------------------------------------------------
 prop_cushion() ->
-    Dbs = cushion:get_dbs(default_access()),
+    Access = default_access(),
+    ExistingDbs = cushion:get_dbs(Access),
     ?FORALL(
-       Cmds, commands(?MODULE),
-       begin
-           {H,S,Res} = run_commands(?MODULE,Cmds),
-           restore_dbs(Dbs),
-           aggregate(
-             eqc_statem:zip(
-               eqc_fsm:state_names(H),eqc_statem:command_names(Cmds)),
-             ?WHENFAIL(
-                io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
-                Res == ok))
-       end).
+       DbNames, db_names(ExistingDbs),
+       ?FORALL(
+          Cmds,
+          commands(
+            ?MODULE, {ready, #state{db_names = DbNames, access = Access}}),
+
+          begin
+              {H,S,Res} = run_commands(?MODULE,Cmds),
+              restore_dbs(ExistingDbs),
+              aggregate(
+                eqc_statem:zip(
+                  eqc_fsm:state_names(H),eqc_statem:command_names(Cmds)),
+                ?WHENFAIL(
+                   io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
+                   Res == ok))
+          end)).
 
 %%%-------------------------------------------------------------------
 %%% Internals
@@ -256,43 +247,3 @@ restore_dbs(BlackList) ->
               end
       end,
       Dbs).
-
-%% Homebrew generator, since I didn't find out how to generate a list of valid
-%% db names out of quickcheck without complicating the code too much.
-%% We avoid generating a name that already exists in CouchDB
-generate_db_names(Existing) ->
-    random:seed(now()),
-    N = random:uniform(max_db_names()),
-    generate_names(valid_db_name_chars(), Existing, N).
-
-generate_names(_, _, 0) ->
-    [];
-generate_names(Chars, Existing, N) ->
-    Name = generate_name(Chars),
-    case lists:member(Name, Existing) of
-        true ->
-            generate_names(Chars, Existing, N);
-        false ->
-            [Name | generate_names(Chars, Existing, N - 1)]
-    end.
-
-generate_name(Chars) ->
-    Length = random:uniform(max_db_name_length()),
-    NChars = length(Chars),
-    generate_chars(NChars, Chars, Length).
-
-generate_chars(_, _, 0) ->
-    [];
-generate_chars(NChars, Chars, Length) ->
-    [lists:nth(random:uniform(NChars), Chars)
-     | generate_chars(NChars, Chars, Length - 1)].
-
-%% I don't think managing more than 5 dbs would add anything to the tests
-max_db_names() ->
-    5.
-
-%% Better somewhat longer, so that all valid characters have a chance to appear,
-%% longer names have poorer repetition, but we fix that restricting the set of
-%% names to generate and repeating them
-max_db_name_length() ->
-    10.
