@@ -110,9 +110,9 @@ initial_state() ->
 
 %% Initialize the state data
 initial_state_data() ->
-    #state{access = default_access(),
-           db_names = [],
-           dbs = []}.
+    % We must start in a known state using commands/2, so this callback is never
+    % used
+    erlang:error(should_not_be_reached).
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
