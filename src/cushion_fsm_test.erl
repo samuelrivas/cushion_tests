@@ -108,8 +108,16 @@ bad_db_and_doc_ref(S) ->
 valid_db_name_chars() ->
       lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"]).
 
+%% Avoid shrink to non-object JSONs
 doc() ->
-    cushion_json_test:in_object().
+    ?SUCHTHAT(
+       Obj, cushion_json_test:in_object(),
+       case Obj of
+           {obj, _} ->
+               true;
+           _ ->
+               false
+       end).
 
 get_all_refs(#state{dbs_and_docs = DbsAndDocs}) ->
     {_Bds, Refs} = lists:unzip(DbsAndDocs),
@@ -166,6 +174,12 @@ next_state_data(_,_,S,V,{call,_,create_doc,[_, Db, _Doc]}) ->
       dbs_and_docs =
         lists:keyreplace(Db, 1, S#state.dbs_and_docs, {Db, [V | Docs]})};
 
+next_state_data(_,_,S,_V,{call,_,delete_doc,[_, {Db, Ref}]}) ->
+    {value, {Db, Docs}} = lists:keysearch(Db, 1, S#state.dbs_and_docs),
+    S#state{
+      dbs_and_docs =
+        lists:keyreplace(Db, 1, S#state.dbs_and_docs, {Db, Docs -- [Ref]})};
+
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -203,6 +217,8 @@ postcondition(ready, ready,_S,{call,_,fail_delete_db,[_Access,_Db]},Res) ->
     Res == {error, 404};
 postcondition(ready, ready,_S,{call,_,create_doc,[_Access,_Db, _Doc]}, Res) ->
     case Res of
+        {error, _} ->
+            false;
         {_Id, _Vsn} ->
             true;
         _ ->
@@ -257,7 +273,7 @@ fail_delete_doc(Access, {Db, DocRef}) ->
     delete_doc(Access, {Db, DocRef}).
 
 delete_doc(Access, {Db, DocRef}) ->
-    cushion:delete_doc(Access, Db, DocRef).
+    catch_error(fun() -> cushion:delete_doc(Access, Db, DocRef) end).
 
 catch_error(F) ->
     try F()
