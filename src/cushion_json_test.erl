@@ -27,6 +27,9 @@
 -include_lib("eqc/include/eqc.hrl").
 -export([prop_roundtrip/0]).
 
+%% Generators used in other tests
+-export([in_object/0]).
+
 %%%-------------------------------------------------------------------
 %%% Generators
 %%%-------------------------------------------------------------------
@@ -65,6 +68,9 @@ in_array(S) ->
 
 %% Objects shrink to one of their field values or field names, otherwise deeply
 %% nested object with a failing case in them would be difficult to debug.
+in_object() ->
+    ?SIZED(S, in_object(S)).
+
 in_object(S) ->
     ?LET(
        Fields, eqc_gen:list(field(S div 2)),

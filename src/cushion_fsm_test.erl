@@ -39,7 +39,8 @@
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, fail_create_db/2,
-         fail_delete_db/2, delete_db/2, create_doc/2, delete_doc/2]).
+         fail_delete_db/2, delete_db/2, create_doc/3, delete_doc/2,
+         fail_delete_doc/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -74,6 +75,9 @@ db_name() ->
        H, eqc_gen:choose($a, $z),
        ?LET(T, eqc_gen:list(db_name_char()), [H | T])).
 
+db_name(#state{db_names = Names}) ->
+    eqc_gen:elements(Names).
+
 db_name_char() ->
     eqc_gen:elements(valid_db_name_chars()).
 
@@ -93,11 +97,31 @@ existing_db_and_doc_ref(S = #state{dbs_and_docs = Dbs}) ->
            {Db, eqc_gen:elements(Docs)}
        end).
 
+bad_db_and_doc_ref(S) ->
+    ?SUCHTHAT(
+       {Db, Ref}, {db_name(S), eqc_gen:elements(get_all_refs(S))},
+       not lists:member(Ref, get_db_docs(S, Db))).
+
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
 %% must be encoded to %2F, that's not yet implemented.
 valid_db_name_chars() ->
       lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"]).
+
+doc() ->
+    cushion_json_test:in_object().
+
+get_all_refs(#state{dbs_and_docs = DbsAndDocs}) ->
+    {_Bds, Refs} = lists:unzip(DbsAndDocs),
+    lists:flatten(Refs).
+
+get_db_docs(#state{dbs_and_docs = DbsAndDocs}, Db) ->
+    case lists:keysearch(Db, 1, DbsAndDocs) of
+        {value, {Db, Docs}} ->
+            Docs;
+        false ->
+            []
+    end.
 
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
@@ -113,8 +137,9 @@ ready(S) ->
      {ready, {call, ?MODULE, fail_create_db, [Access, existing_db_name(S)]}},
      {ready, {call, ?MODULE, delete_db, [Access, existing_db_name(S)]}},
      {ready, {call, ?MODULE, fail_delete_db, [Access, new_db_name(S)]}},
-     {ready, {call, ?MODULE, create_doc, [Access, existing_db_name(S)]}},
-     {ready, {call, ?MODULE, delete_doc, [Access, existing_db_and_doc_ref(S)]}}
+     {ready, {call, ?MODULE, create_doc, [Access, existing_db_name(S), doc()]}},
+     {ready, {call, ?MODULE, delete_doc, [Access, existing_db_and_doc_ref(S)]}},
+     {ready, {call, ?MODULE, fail_delete_doc, [Access, bad_db_and_doc_ref(S)]}}
     ].
 
 %% Identify the initial state
@@ -133,9 +158,9 @@ next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
     S#state{dbs_and_docs = [{Db, []} | S#state.dbs_and_docs]};
 
 next_state_data(_,_,S,_V,{call,_,delete_db,[_, Db]}) ->
-    S#state{dbs_and_docs =  lists:keydelete(Db, 1, S#state.dbs_and_docs)};
+    S#state{dbs_and_docs = lists:keydelete(Db, 1, S#state.dbs_and_docs)};
 
-next_state_data(_,_,S,V,{call,_,create_doc,[_, Db]}) ->
+next_state_data(_,_,S,V,{call,_,create_doc,[_, Db, _Doc]}) ->
     {value, {Db, Docs}} = lists:keysearch(Db, 1, S#state.dbs_and_docs),
     S#state{
       dbs_and_docs =
@@ -159,15 +184,18 @@ postcondition(ready, ready,_S,{call,_,delete_db,[_Access,_Db]},Res) ->
     Res == ok;
 postcondition(ready, ready,_S,{call,_,fail_delete_db,[_Access,_Db]},Res) ->
     Res == {error, 404};
-postcondition(ready, ready,_S,{call,_,create_doc,[_Access,_Db]}, Res) ->
+postcondition(ready, ready,_S,{call,_,create_doc,[_Access,_Db, _Doc]}, Res) ->
     case Res of
         {_Id, _Vsn} ->
             true;
         _ ->
             false
     end;
-postcondition(ready, ready,_S,{call,_,delete_doc,[_Access,{_Db,_Ref}]}, Res) ->
-    Res == ok.
+postcondition(ready,ready,_S,{call,_,delete_doc,[_Access,{_Db,_Ref}]}, Res) ->
+    Res == ok;
+postcondition(
+  ready,ready,_S,{call,_,fail_delete_doc,[_Access,{_Db,_Ref}]},Res) ->
+    Res == {error, 404}.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -205,8 +233,11 @@ fail_delete_db(Access, Name) ->
 delete_db(Access, Name) ->
     catch_error(fun() -> cushion:delete_db(Access, Name) end).
 
-create_doc(Access, Db) ->
-    catch_error(fun() -> cushion:create_doc(Access, Db) end).
+create_doc(Access, Db, Doc) ->
+    catch_error(fun() -> cushion:create_doc(Access, Db, Doc) end).
+
+fail_delete_doc(Access, {Db, DocRef}) ->
+    delete_doc(Access, {Db, DocRef}).
 
 delete_doc(Access, {Db, DocRef}) ->
     cushion:delete_doc(Access, Db, DocRef).
