@@ -232,8 +232,24 @@ postcondition(
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
+weight(_From,_To,{call,_,create_db,_}) ->
+    10;
+weight(_From,_To,{call,_,fail_create_db,_}) ->
+    5;
+weight(_From,_To,{call,_,delete_db,_}) ->
+    10;
+weight(_From,_To,{call,_,fail_delete_db,_}) ->
+    2;
+weight(_From,_To,{call,_,create_doc,_}) ->
+    20;
+weight(_From,_To,{call,_,fail_create_doc,_}) ->
+    20;
+weight(_From,_To,{call,_,delete_doc,_}) ->
+    30;
+weight(_From,_To,{call,_,fail_delete_doc,_}) ->
+    20;
 weight(_From,_To,{call,_,_,_}) ->
-    1.
+    10.
 
 %%%-------------------------------------------------------------------
 %%% Wrappers
