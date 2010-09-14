@@ -43,46 +43,46 @@
 %% Creating an auto-id document should never fail.
 %% XXX we cannot do finer tests until we have the response parser, so far we
 %% just execute the function as a smoke test
-create_document_test_() ->
+create_doc_test_() ->
     {Host, Port, Db} = conf(),
     standard_fixture(
       [lists:duplicate(
 	 3,
 	 ?_test(
-	    cushion_couch_api:create_document(
+	    cushion_couch_api:create_doc(
 	      Host, Port, Db, ?TEST_DOC(empty))))]).
 
 %% Test the most common document API
-document_test_() ->
+doc_test_() ->
     {Host, Port, Db} = conf(),
     Id = "test1",
     standard_fixture(
       [
        % Create a new document and get it
-       ?_test(cushion_couch_api:update_document(
+       ?_test(cushion_couch_api:update_doc(
 		Host, Port, Db, Id, ?TEST_DOC(empty))),
-       ?_test(cushion_couch_api:get_document(Host, Port, Db, Id)),
+       ?_test(cushion_couch_api:get_doc(Host, Port, Db, Id)),
 
        % Now, test get and update negative cases
        ?_assertThrow(
 	  {couchdb_error, {409, _}},
-	  cushion_couch_api:update_document(
+	  cushion_couch_api:update_doc(
 	    Host, Port, Db, Id, ?TEST_DOC(empty))),
        ?_assertThrow(
 	  {couchdb_error, {404, _}},
-	  cushion_couch_api:get_document(Host, Port, Db, "some_id")),
+	  cushion_couch_api:get_doc(Host, Port, Db, "some_id")),
 
        % XXX We cannot test positive delete cases yet
        ?_assertThrow(
 	  {couchdb_error, {400, _}},
-	  cushion_couch_api:delete_document(Host, Port, Db, Id, "")),
+	  cushion_couch_api:delete_doc(Host, Port, Db, Id, "")),
        ?_assertThrow(
 	  {couchdb_error, {404, _}},
-	  cushion_couch_api:delete_document(
+	  cushion_couch_api:delete_doc(
 	    Host, Port, Db, "some_id", fake_rev())),
        ?_assertThrow(
 	  {couchdb_error, {409, _}},
-	  cushion_couch_api:delete_document(Host, Port, Db, Id, fake_rev()))]).
+	  cushion_couch_api:delete_doc(Host, Port, Db, Id, fake_rev()))]).
 
 
 %% Test the DB API
