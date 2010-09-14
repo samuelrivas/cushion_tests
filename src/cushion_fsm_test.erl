@@ -39,7 +39,7 @@
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, fail_create_db/2,
-         fail_delete_db/2, delete_db/2]).
+         fail_delete_db/2, delete_db/2, create_doc/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -102,7 +102,8 @@ ready(S) ->
      {ready, {call, ?MODULE, create_db, [Access, new_db_name(S)]}},
      {ready, {call, ?MODULE, fail_create_db, [Access, existing_db_name(S)]}},
      {ready, {call, ?MODULE, delete_db, [Access, existing_db_name(S)]}},
-     {ready, {call, ?MODULE, fail_delete_db, [Access, new_db_name(S)]}}
+     {ready, {call, ?MODULE, fail_delete_db, [Access, new_db_name(S)]}},
+     {ready, {call, ?MODULE, create_doc, [Access, existing_db_name(S)]}}
     ].
 
 %% Identify the initial state
@@ -140,7 +141,14 @@ postcondition(ready, ready,_S, {call,_,fail_create_db,[_Access,_Db]},Res) ->
 postcondition(ready, ready,_S,{call,_,delete_db,[_Access,_Db]},Res) ->
     Res == ok;
 postcondition(ready, ready,_S,{call,_,fail_delete_db,[_Access,_Db]},Res) ->
-    Res == {error, 404}.
+    Res == {error, 404};
+postcondition(ready, ready,_S,{call,_,create_doc,[_Access,_Db]}, Res) ->
+    case Res of
+        {_Id, _Vsn} ->
+            true;
+        _ ->
+            false
+    end.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -177,6 +185,9 @@ fail_delete_db(Access, Name) ->
 
 delete_db(Access, Name) ->
     catch_error(fun() -> cushion:delete_db(Access, Name) end).
+
+create_doc(Access, Db) ->
+    catch_error(fun() -> cushion:create_doc(Access, Db) end).
 
 catch_error(F) ->
     try F()
