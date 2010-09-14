@@ -1,3 +1,5 @@
 *~
 src/current_counterexample.eqc
 *.beam
+src/*.dot
+src/*.jpg
