@@ -39,7 +39,7 @@
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, fail_create_db/2,
-         delete_db/2]).
+         fail_delete_db/2, delete_db/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -101,7 +101,8 @@ ready(S) ->
     [
      {ready, {call, ?MODULE, create_db, [Access, new_db_name(S)]}},
      {ready, {call, ?MODULE, fail_create_db, [Access, existing_db_name(S)]}},
-     {ready, {call, ?MODULE, delete_db, [Access, existing_db_name(S)]}}
+     {ready, {call, ?MODULE, delete_db, [Access, existing_db_name(S)]}},
+     {ready, {call, ?MODULE, fail_delete_db, [Access, new_db_name(S)]}}
     ].
 
 %% Identify the initial state
@@ -133,17 +134,13 @@ precondition(_From,_To,_S,{call,_,_,_}) ->
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state_data(From,To,S,_,<command>)
 postcondition(ready, ready,_S, {call,_,create_db,[_Access,_Db]},Res) ->
-        Res == ok;
+    Res == ok;
 postcondition(ready, ready,_S, {call,_,fail_create_db,[_Access,_Db]},Res) ->
     Res == {error, 412};
-postcondition(ready, ready,S,{call,_,delete_db,[_Access,Db]},Res) ->
-    Existed = lists:member(Db, S#state.dbs),
-    case Res of
-        ok ->
-            Existed;
-        {error, 404} ->
-            not Existed
-    end.
+postcondition(ready, ready,_S,{call,_,delete_db,[_Access,_Db]},Res) ->
+    Res == ok;
+postcondition(ready, ready,_S,{call,_,fail_delete_db,[_Access,_Db]},Res) ->
+    Res == {error, 404}.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -174,6 +171,9 @@ fail_create_db(Access, Name) ->
 
 create_db(Access, Name) ->
     catch_error(fun() -> cushion:create_db(Access, Name) end).
+
+fail_delete_db(Access, Name) ->
+    delete_db(Access, Name).
 
 delete_db(Access, Name) ->
     catch_error(fun() -> cushion:delete_db(Access, Name) end).
