@@ -38,7 +38,8 @@
 -export([ready/1]).
 
 %% Wrappers
--export([initialise/1, new_access/2, get_dbs/1, create_db/2, delete_db/2]).
+-export([initialise/1, new_access/2, get_dbs/1, create_db/2, fail_create_db/2,
+         delete_db/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -82,6 +83,12 @@ db_name_char() ->
 valid_db_name_chars() ->
       lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"]).
 
+new_db_name(#state{dbs = Dbs, db_names = DbNames}) ->
+    eqc_gen:elements(DbNames -- Dbs).
+
+existing_db_name(#state{dbs = Dbs}) ->
+    eqc_gen:elements(Dbs).
+
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
 %%%-------------------------------------------------------------------
@@ -92,8 +99,9 @@ valid_db_name_chars() ->
 ready(S) ->
     Access = S#state.access,
     [
-     {ready, {call, ?MODULE, create_db, [Access, db_name(S)]}},
-     {ready, {call, ?MODULE, delete_db, [Access, db_name(S)]}}
+     {ready, {call, ?MODULE, create_db, [Access, new_db_name(S)]}},
+     {ready, {call, ?MODULE, fail_create_db, [Access, existing_db_name(S)]}},
+     {ready, {call, ?MODULE, delete_db, [Access, existing_db_name(S)]}}
     ].
 
 %% Identify the initial state
@@ -108,20 +116,12 @@ initial_state_data() ->
 
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
-next_state_data(_,_,S,V,{call,_,create_db,[_, Db]}) ->
-    case V of
-        ok ->
-            S#state{dbs = [Db | S#state.dbs]};
-        _ ->
-            S
-    end;
-next_state_data(_,_,S,V,{call,_,delete_db,[_, Db]}) ->
-    case V of
-        ok ->
-            S#state{dbs =  lists:delete(Db, S#state.dbs)};
-        _ ->
-            S
-    end;
+next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
+    S#state{dbs = [Db | S#state.dbs]};
+
+next_state_data(_,_,S,_V,{call,_,delete_db,[_, Db]}) ->
+    S#state{dbs =  lists:delete(Db, S#state.dbs)};
+
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
 
@@ -132,15 +132,10 @@ precondition(_From,_To,_S,{call,_,_,_}) ->
 
 %% Postcondition, checked after command has been evaluated
 %% OBS: S is the state before next_state_data(From,To,S,_,<command>)
-postcondition(ready, ready,S, {call,_,create_db,[_Access,Db]},Res) ->
-
-    Existed = lists:member(Db, S#state.dbs),
-    case Res of
-        ok ->
-            not Existed;
-        {error, 412} ->
-            Existed
-    end;
+postcondition(ready, ready,_S, {call,_,create_db,[_Access,_Db]},Res) ->
+        Res == ok;
+postcondition(ready, ready,_S, {call,_,fail_create_db,[_Access,_Db]},Res) ->
+    Res == {error, 412};
 postcondition(ready, ready,S,{call,_,delete_db,[_Access,Db]},Res) ->
     Existed = lists:member(Db, S#state.dbs),
     case Res of
@@ -159,6 +154,10 @@ weight(_From,_To,{call,_,_,_}) ->
 %%% Wrappers
 %%%-------------------------------------------------------------------
 
+%%% fail_xxx wrappers do the same as xxx but the fsm expects them to fail. It's
+%%% done this way since we cannot depend on the result in next_state_data or in
+%%% state functions, so we just steer testing process using transition names
+
 %% XXX Does nothing, but we need this to insert the allowed db name set in the
 %% state, see next_state_data.
 initialise(_DbNames) ->
@@ -169,6 +168,9 @@ new_access(Host, Port) ->
 
 get_dbs(Access) ->
     cushion:get_dbs(Access).
+
+fail_create_db(Access, Name) ->
+    create_db(Access, Name).
 
 create_db(Access, Name) ->
     catch_error(fun() -> cushion:create_db(Access, Name) end).
