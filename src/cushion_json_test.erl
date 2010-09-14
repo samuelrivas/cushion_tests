@@ -69,11 +69,14 @@ in_array(S) ->
 %% Objects shrink to one of their field values or field names, otherwise deeply
 %% nested object with a failing case in them would be difficult to debug.
 in_object() ->
-    ?SIZED(S, in_object(S)).
+    ?SIZED(S, in_object(S, true)).
 
 in_object(S) ->
+    in_object(S, false).
+
+in_object(S, Special) ->
     ?LET(
-       Fields, eqc_gen:list(field(S div 2)),
+       Fields, eqc_gen:list(field(S div 2, Special)),
        ?SHRINK(
           {obj, Fields},
           [V || {_K, V} <- Fields] ++ [K || {K, _V} <- Fields])).
@@ -85,8 +88,20 @@ printable() ->
 in_intervals(Intervals) ->
     eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
 
-field(S) ->
-    {in_string(), in_value(S)}.
+field(S, Special) ->
+    {field_name(Special), in_value(S)}.
+
+field_name(false) ->
+    in_string();
+field_name(true) ->
+    ?SUCHTHAT(
+       S, in_string(),
+       case S of
+           <<"_", _/binary>> ->
+               false;
+           _ ->
+               true
+       end).
 
 %%%-------------------------------------------------------------------
 %%% Properties
