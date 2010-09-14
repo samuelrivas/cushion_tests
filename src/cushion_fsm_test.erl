@@ -171,6 +171,23 @@ next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
 
 %% Precondition (for state data).
 %% Precondition is checked before command is added to the command sequence
+precondition(_From,_To,S,{call,_,create_db,[_, Db]}) ->
+    not lists:member(Db, remove_docs(S#state.dbs_and_docs));
+precondition(_From,_To,S,{call,_,fail_create_db,[_, Db]}) ->
+    lists:member(Db, remove_docs(S#state.dbs_and_docs));
+
+precondition(_From,_To,S,{call,_,delete_db,[_, Db]}) ->
+    lists:member(Db, remove_docs(S#state.dbs_and_docs));
+precondition(_From,_To,S,{call,_,fail_delete_db,[_, Db]}) ->
+    not lists:member(Db, remove_docs(S#state.dbs_and_docs));
+
+precondition(_From,_To,S,{call,_,create_doc,[_, Db, _Doc]}) ->
+    lists:member(Db, remove_docs(S#state.dbs_and_docs));
+
+precondition(_From,_To,S,{call,_,delete_doc,[_, {Db, Ref}]}) ->
+    lists:member(Ref, get_db_docs(S, Db));
+precondition(_From,_To,S,{call,_,fail_delete_doc,[_, {Db, Ref}]}) ->
+    not lists:member(Ref, get_db_docs(S, Db));
 precondition(_From,_To,_S,{call,_,_,_}) ->
     true.
 
