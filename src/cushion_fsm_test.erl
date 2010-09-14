@@ -18,20 +18,12 @@
 %%%-------------------------------------------------------------------
 %%% @author Samuel Rivas <samuelrivas@gmail.com>
 %%% @copyright (C) 2010, Samuel Rivas
-%%% @doc This module tests the couch api fsm for a single database.
+%%% @doc This module tests couch api generating random fsm's.
 %%%
-%%% In short, the transitions could be:
-%%% <ul>
-%%% <li>Configure couchdb access</li>
-%%% <li>Create a database</li>
-%%% <li>Create a document</li>
-%%% <li>Update a document</li>
-%%% <li>Retrieve a document</li>
-%%% <li>Delete a document</li>
-%%% <li>Delete a database</li>
-%%%
-%%% CouchDB access object will be static and thus need not be deleted. The GC
-%%% will take care of it :)
+%%% These tests take care of existing databases in the configured CouchDB
+%%% server. They wouldn't be used for testing. The tests will create and destroy
+%%% new databases, and create, update, and delete documents on them. After the
+%%% test finish, any remaining testing database will be deleted.
 %%%
 %%% @end
 %%% Created :  7 Sep 2010 by Samuel Rivas <samuelrivas@gmail.com>
