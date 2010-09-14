@@ -50,7 +50,7 @@
 -record(state,{
           access = undefined_acces, % cushion_access(), the access to couchdb
           db_names = [],            % [string()], a random set of valid db names
-          dbs = []                  % [string()], dbs created in the test
+          dbs_and_docs = []         % [{string(), [doc()]], dbs created in the test
          }).
 
 %%%-------------------------------------------------------------------
@@ -77,11 +77,11 @@ db_name_char() ->
 
 %% Next two generators allow us to control whether db operations should pass or
 %% fail
-new_db_name(#state{dbs = Dbs, db_names = DbNames}) ->
-    eqc_gen:elements(DbNames -- Dbs).
+new_db_name(#state{dbs_and_docs = Dbs, db_names = DbNames}) ->
+    eqc_gen:elements(DbNames -- remove_docs(Dbs)).
 
-existing_db_name(#state{dbs = Dbs}) ->
-    eqc_gen:elements(Dbs).
+existing_db_name(#state{dbs_and_docs = Dbs}) ->
+    eqc_gen:elements(remove_docs(Dbs)).
 
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
@@ -119,10 +119,16 @@ initial_state_data() ->
 %% Next state transformation for state data.
 %% S is the current state, From and To are state names
 next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
-    S#state{dbs = [Db | S#state.dbs]};
+    S#state{dbs_and_docs = [{Db, []} | S#state.dbs_and_docs]};
 
 next_state_data(_,_,S,_V,{call,_,delete_db,[_, Db]}) ->
-    S#state{dbs =  lists:delete(Db, S#state.dbs)};
+    S#state{dbs_and_docs =  lists:keydelete(Db, 1, S#state.dbs_and_docs)};
+
+next_state_data(_,_,S,V,{call,_,create_doc,[_, Db]}) ->
+    {value, {Db, Docs}} = lists:keysearch(Db, 1, S#state.dbs_and_docs),
+    S#state{
+      dbs_and_docs =
+        lists:keyreplace(Db, 1, S#state.dbs_and_docs, {Db, [V | Docs]})};
 
 next_state_data(_From,_To,S,_V,{call,_,_,_}) ->
     S.
@@ -252,3 +258,6 @@ restore_dbs(BlackList) ->
               end
       end,
       Dbs).
+
+remove_docs(DbsAndDocs) ->
+    [Db || {Db, _Docs} <- DbsAndDocs].
