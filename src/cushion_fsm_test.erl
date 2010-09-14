@@ -39,7 +39,7 @@
 
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, fail_create_db/2,
-         fail_delete_db/2, delete_db/2, create_doc/2]).
+         fail_delete_db/2, delete_db/2, create_doc/2, delete_doc/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -50,7 +50,9 @@
 -record(state,{
           access = undefined_acces, % cushion_access(), the access to couchdb
           db_names = [],            % [string()], a random set of valid db names
-          dbs_and_docs = []         % [{string(), [doc()]], dbs created in the test
+          dbs_and_docs = []         % [{string(), [doc_ref()]],
+                                    % dbs created in the test. A doc_ref is
+                                    % {id, vsn}
          }).
 
 %%%-------------------------------------------------------------------
@@ -83,6 +85,14 @@ new_db_name(#state{dbs_and_docs = Dbs, db_names = DbNames}) ->
 existing_db_name(#state{dbs_and_docs = Dbs}) ->
     eqc_gen:elements(remove_docs(Dbs)).
 
+existing_db_and_doc_ref(S = #state{dbs_and_docs = Dbs}) ->
+    ?LET(
+       Db, existing_db_name(S),
+       begin
+           {value, {Db, Docs}} = lists:keysearch(Db, 1, Dbs),
+           {Db, eqc_gen:elements(Docs)}
+       end).
+
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
 %% must be encoded to %2F, that's not yet implemented.
@@ -103,7 +113,8 @@ ready(S) ->
      {ready, {call, ?MODULE, fail_create_db, [Access, existing_db_name(S)]}},
      {ready, {call, ?MODULE, delete_db, [Access, existing_db_name(S)]}},
      {ready, {call, ?MODULE, fail_delete_db, [Access, new_db_name(S)]}},
-     {ready, {call, ?MODULE, create_doc, [Access, existing_db_name(S)]}}
+     {ready, {call, ?MODULE, create_doc, [Access, existing_db_name(S)]}},
+     {ready, {call, ?MODULE, delete_doc, [Access, existing_db_and_doc_ref(S)]}}
     ].
 
 %% Identify the initial state
@@ -154,7 +165,9 @@ postcondition(ready, ready,_S,{call,_,create_doc,[_Access,_Db]}, Res) ->
             true;
         _ ->
             false
-    end.
+    end;
+postcondition(ready, ready,_S,{call,_,delete_doc,[_Access,{_Db,_Ref}]}, Res) ->
+    Res == ok.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -194,6 +207,9 @@ delete_db(Access, Name) ->
 
 create_doc(Access, Db) ->
     catch_error(fun() -> cushion:create_doc(Access, Db) end).
+
+delete_doc(Access, {Db, DocRef}) ->
+    cushion:delete_doc(Access, Db, DocRef).
 
 catch_error(F) ->
     try F()
