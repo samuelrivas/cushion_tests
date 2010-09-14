@@ -63,31 +63,31 @@ blacklisted_db_name(Blacklist) ->
     ?SUCHTHAT(N, db_name(), not lists:member(N, Blacklist)).
 
 %% Generate names according to CouchDB name rules
+%%
+%% To favour repetition and, at the same time, look for possible broken
+%% character combinations, we generate a set of random names and use them
+%% through all fsm testing
 db_name() ->
     ?LET(
        H, eqc_gen:choose($a, $z),
        ?LET(T, eqc_gen:list(db_name_char()), [H | T])).
 
-%% To favour repetition and, at the same time, look for possible broken
-%% character combinations, we generate a set of random names and use them
-%% through all fsm testing
-db_name(S) ->
-    eqc_gen:elements(S#state.db_names).
-
 db_name_char() ->
     eqc_gen:elements(valid_db_name_chars()).
+
+%% Next two generators allow us to control whether db operations should pass or
+%% fail
+new_db_name(#state{dbs = Dbs, db_names = DbNames}) ->
+    eqc_gen:elements(DbNames -- Dbs).
+
+existing_db_name(#state{dbs = Dbs}) ->
+    eqc_gen:elements(Dbs).
 
 %% XXX according to the documentation, couchdb should accept + as db name
 %% character, but right now that's failing unless + is encoded as %2B. Also /
 %% must be encoded to %2F, that's not yet implemented.
 valid_db_name_chars() ->
       lists:flatten([lists:seq($a, $z), lists:seq($0, $9), "_$()-"]).
-
-new_db_name(#state{dbs = Dbs, db_names = DbNames}) ->
-    eqc_gen:elements(DbNames -- Dbs).
-
-existing_db_name(#state{dbs = Dbs}) ->
-    eqc_gen:elements(Dbs).
 
 %%%-------------------------------------------------------------------
 %%% eqc_fsm callbacks
