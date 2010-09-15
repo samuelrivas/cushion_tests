@@ -76,10 +76,29 @@ in_object(S) ->
 
 in_object(S, Special) ->
     ?LET(
-       Fields, eqc_gen:list(field(S div 2, Special)),
+       Fields, fields(S, Special),
        ?SHRINK(
           {obj, Fields},
           [V || {_K, V} <- Fields] ++ [K || {K, _V} <- Fields])).
+
+fields(S, Special) ->
+    ?LET(
+       Fields, eqc_gen:list(field(S div 2, Special)),
+       remove_dups(Fields)).
+
+%% Remove duplicated field keys to avoid inconsistencies
+remove_dups(Fields) ->
+    remove_dups(Fields, []).
+
+remove_dups([{K, V}|T], Ks) ->
+    case lists:member(K, Ks) of
+        true ->
+            remove_dups(T, Ks);
+        false ->
+            [{K, V} | remove_dups(T, [K|Ks])]
+    end;
+remove_dups([], _) ->
+    [].
 
 %% Auxiliary generators
 printable() ->
