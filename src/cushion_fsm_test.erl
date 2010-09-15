@@ -51,9 +51,10 @@
 -record(state,{
           access = undefined_acces, % cushion_access(), the access to couchdb
           db_names = [],            % [string()], a random set of valid db names
-          dbs_and_docs = []         % [{string(), [doc_ref()]],
+          dbs_and_docs = [],        % [{string(), [doc_ref()]],
                                     % dbs created in the test. A doc_ref is
                                     % {id, vsn}
+          docs = []                 % {db(), doc_ref(), doc()}
          }).
 
 %%%-------------------------------------------------------------------
@@ -169,11 +170,12 @@ next_state_data(_,_,S,_V,{call,_,create_db,[_, Db]}) ->
 next_state_data(_,_,S,_V,{call,_,delete_db,[_, Db]}) ->
     S#state{dbs_and_docs = lists:keydelete(Db, 1, S#state.dbs_and_docs)};
 
-next_state_data(_,_,S,V,{call,_,create_doc,[_, Db, _Doc]}) ->
+next_state_data(_,_,S,V,{call,_,create_doc,[_, Db, Doc]}) ->
     {value, {Db, Docs}} = lists:keysearch(Db, 1, S#state.dbs_and_docs),
     S#state{
       dbs_and_docs =
-        lists:keyreplace(Db, 1, S#state.dbs_and_docs, {Db, [V | Docs]})};
+        lists:keyreplace(Db, 1, S#state.dbs_and_docs, {Db, [V | Docs]}),
+      docs = [{Db, V, Doc} | S#state.docs]};
 
 next_state_data(_,_,S,_V,{call,_,delete_doc,[_, {Db, Ref}]}) ->
     {value, {Db, Docs}} = lists:keysearch(Db, 1, S#state.dbs_and_docs),
@@ -230,13 +232,8 @@ postcondition(ready,ready,_S,{call,_,delete_doc,[_Access,{_Db,_Ref}]}, Res) ->
 postcondition(
   ready,ready,_S,{call,_,fail_delete_doc,[_Access,{_Db,_Ref}]},Res) ->
     Res == {error, 404};
-postcondition(ready,ready,_S,{call,_,get_doc,[_Access,{_Db,_Ref}]},Res) ->
-    case Res of
-        {obj, _} ->
-            true;
-        _ ->
-            false
-    end.
+postcondition(ready,ready,S,{call,_,get_doc,[_Access,{Db,Ref}]},Res) ->
+    obj_equals(find_doc(S, Db, Ref), Res).
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -301,8 +298,8 @@ fail_delete_doc(Access, {Db, DocRef}) ->
 delete_doc(Access, {Db, DocRef}) ->
     catch_error(fun() -> cushion:delete_doc(Access, Db, DocRef) end).
 
-get_doc(Access, {Db, DocRef}) ->
-    catch_error(fun() -> cushion:get_doc(Access, Db, DocRef) end).
+get_doc(Access, {Db, {Id, _Vsn}}) ->
+    catch_error(fun() -> cushion:get_doc(Access, Db, Id) end).
 
 catch_error(F) ->
     try F()
@@ -370,3 +367,39 @@ restore_dbs(BlackList) ->
 
 remove_docs(DbsAndDocs) ->
     [Db || {Db, _Docs} <- DbsAndDocs].
+
+find_doc(#state{docs = Docs}, Db, {Id, _Vsn}) ->
+    find_doc_rec(Docs, Db, Id).
+
+find_doc_rec([], Db, Id) ->
+    erlang:error({not_found, Db, Id});
+find_doc_rec([{Db, {Id, _}, Doc} | _], Db, Id) ->
+    Doc;
+find_doc_rec([{_, _, _} | T], Db, Id) ->
+    find_doc_rec(T, Db, Id).
+
+%% Compare that all fields in A are in B. This is not reflexive, since B may
+%% have additional special fields, such as _rev or _id
+obj_equals({obj, A}, {obj, B}) ->
+    field_equals(A, B);
+obj_equals(A, B) ->
+    erlang:error({different, A, B}).
+
+field_equals(A, B) ->
+    lists:all(
+      fun({K, V}) ->
+              case lists:keysearch(K, 1, B) of
+                  {value, {K, V2}} ->
+                      value_equals(V, V2);
+                  false ->
+                      erlang:error({not_found, K, B})
+              end
+      end,
+      A).
+
+value_equals({obj, A}, B) ->
+    obj_equals({obj, A}, B);
+value_equals(A, A) ->
+    true;
+value_equals(A, B) ->
+    erlang:error({different, A, B}).
