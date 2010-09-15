@@ -40,7 +40,7 @@
 %% Wrappers
 -export([initialise/1, new_access/2, get_dbs/1, create_db/2, fail_create_db/2,
          fail_delete_db/2, delete_db/2, create_doc/3, delete_doc/2,
-         fail_delete_doc/2]).
+         fail_delete_doc/2, get_doc/2]).
 
 %% Public API
 -export([prop_cushion/0]).
@@ -147,7 +147,8 @@ ready(S) ->
      {ready, {call, ?MODULE, fail_delete_db, [Access, new_db_name(S)]}},
      {ready, {call, ?MODULE, create_doc, [Access, existing_db_name(S), doc()]}},
      {ready, {call, ?MODULE, delete_doc, [Access, existing_db_and_doc_ref(S)]}},
-     {ready, {call, ?MODULE, fail_delete_doc, [Access, bad_db_and_doc_ref(S)]}}
+     {ready, {call, ?MODULE, fail_delete_doc, [Access, bad_db_and_doc_ref(S)]}},
+     {ready, {call, ?MODULE, get_doc, [Access, existing_db_and_doc_ref(S)]}}
     ].
 
 %% Identify the initial state
@@ -228,7 +229,14 @@ postcondition(ready,ready,_S,{call,_,delete_doc,[_Access,{_Db,_Ref}]}, Res) ->
     Res == ok;
 postcondition(
   ready,ready,_S,{call,_,fail_delete_doc,[_Access,{_Db,_Ref}]},Res) ->
-    Res == {error, 404}.
+    Res == {error, 404};
+postcondition(ready,ready,_S,{call,_,get_doc,[_Access,{_Db,_Ref}]},Res) ->
+    case Res of
+        {obj, _} ->
+            true;
+        _ ->
+            false
+    end.
 
 %% Weight for transition (this callback is optional).
 %% Specify how often each transition should be chosen
@@ -248,6 +256,8 @@ weight(_From,_To,{call,_,delete_doc,_}) ->
     30;
 weight(_From,_To,{call,_,fail_delete_doc,_}) ->
     20;
+weight(_From,_To,{call,_,get_doc,_}) ->
+    30;
 weight(_From,_To,{call,_,_,_}) ->
     10.
 
@@ -290,6 +300,9 @@ fail_delete_doc(Access, {Db, DocRef}) ->
 
 delete_doc(Access, {Db, DocRef}) ->
     catch_error(fun() -> cushion:delete_doc(Access, Db, DocRef) end).
+
+get_doc(Access, {Db, DocRef}) ->
+    catch_error(fun() -> cushion:get_doc(Access, Db, DocRef) end).
 
 catch_error(F) ->
     try F()
