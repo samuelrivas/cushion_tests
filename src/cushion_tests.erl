@@ -37,7 +37,9 @@ run_test(Test, AppsToCover, CoverLogDir) ->
     write_results(CoverLogDir).
 
 run_test(http_api) ->
-    cushion_couch_api_test:test().
+    cushion_couch_api_test:test();
+run_test(json) ->
+    eqc:quickcheck(cushion_json_test:prop_roundtrip()).
 
 %%%-------------------------------------------------------------------
 %%% Internals
