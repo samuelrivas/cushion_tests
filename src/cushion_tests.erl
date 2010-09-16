@@ -24,14 +24,49 @@
 %%% @end
 %%%-------------------------------------------------------------------
 -module(cushion_tests).
+-export([available_tests/0, run_test/3, run_test/1]).
 
+available_tests() ->
+    [json, http_api, cushion].
+
+
+run_test(Test, AppsToCover, CoverLogDir) ->
+    cover:reset(),
+    lists:foreach(fun cover_compile_app/1, AppsToCover),
+    run_test(Test),
+    write_results(CoverLogDir).
+
+run_test(http_api) ->
+    cushion_couch_api_test:test().
+
+%%%-------------------------------------------------------------------
+%%% Internals
+%%%-------------------------------------------------------------------
 cover_compile_app(App) ->
-    lists:foreach(fun cover:compile/1, source_files(App)).
+    io:format("Cover-compiling ~p:~n", [App]),
+    lists:foreach(
+      fun(File) ->
+              io:format(" * cover-compiling ~s~n", [File]),
+              cushion_util:untuple(cover:compile(File))
+      end,
+      source_files(App)).
 
 source_files(App) ->
-    [get_src(Module) || Module <- cushion_util:app_modules(App)].
+    Src = code:lib_dir(App, src),
+    [get_src(Module, Src) || Module <- cushion_util:app_modules(App)].
 
-get_src(Module) ->
-    cushion_util:get_value(
-      source,
-      cushion_util:get_value(compile, Module:module_info())).
+%% XXX This could be done more elegantly using Module:module_info, but after
+%% cover compiling the information in the source field is wrong
+get_src(Module, Src) ->
+    filename:join(Src, cushion_util:format("~p.erl", [Module])).
+
+write_results(CoverLogDir) ->
+    lists:foreach(
+      fun(Module) -> analyse(Module, CoverLogDir) end, cover:modules()).
+
+analyse(Module, CoverLogDir) ->
+    cushion_util:untuple(
+      cover:analyse_to_file(
+        Module,
+        filename:join(CoverLogDir, cushion_util:format("~p.html", [Module])),
+        [html])).
