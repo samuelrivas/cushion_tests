@@ -39,6 +39,10 @@ run_test(Test, AppsToCover, CoverLogDir) ->
 run_test(http_api) ->
     cushion_couch_api_test:test();
 run_test(json) ->
+    % Run also ktuo tests, just in case (and to get test code covered)
+    ktuo_parse_utils:test(),
+    ktj_parse:test(),
+    ktj_encode:test(),
     eqc:quickcheck(cushion_json_test:prop_roundtrip());
 run_test(cushion) ->
     eqc:quickcheck(cushion_fsm_test:prop_cushion()).
