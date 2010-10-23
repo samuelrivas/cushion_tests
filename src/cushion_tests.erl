@@ -24,16 +24,18 @@
 %%% @end
 %%%-------------------------------------------------------------------
 -module(cushion_tests).
--export([available_tests/0, run_test/3, run_test/1]).
+-export([available_tests/0, run_all/2, run_tests/3, run_test/1]).
 
 available_tests() ->
     [json, http_api, cushion].
 
+run_all(AppsToCover, CoverLogDir) ->
+    run_tests(available_tests(), AppsToCover, CoverLogDir).
 
-run_test(Test, AppsToCover, CoverLogDir) ->
+run_tests(Tests, AppsToCover, CoverLogDir) ->
     cover:reset(),
     lists:foreach(fun cover_compile_app/1, AppsToCover),
-    run_test(Test),
+    lists:foreach(fun run_test/1, Tests),
     write_results(CoverLogDir).
 
 run_test(http_api) ->

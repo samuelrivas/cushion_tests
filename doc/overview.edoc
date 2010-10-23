@@ -1,3 +1,9 @@
 @author Samuel Rivas <samuelrivas@gmail.com>
 @doc Yet another CouchDB adaptation layer <i>still under heavy development.</i>
+
+To run all the tests and a decent coverage analysis just do:
+```
+cushion_util:start_app(cushion),
+cushion_tests:run_all([cushion, cushion_tests, ktuo], "/tmp/cover").
+'''
 @end
