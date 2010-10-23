@@ -69,10 +69,37 @@ get_src(Module, Src) ->
     filename:join(Src, cushion_util:format("~p.erl", [Module])).
 
 write_results(CoverLogDir) ->
+    io:format(
+      " * Analysing clause coverage:~n"
+      "--------------------------------------------------~n"),
     lists:foreach(
-      fun(Module) -> analyse(Module, CoverLogDir) end, cover:modules()).
+      fun(Module) ->
+              analyse_clause_coverage(Module)
+      end,
+      cover:modules()),
 
-analyse(Module, CoverLogDir) ->
+    io:format(
+      "--------------------------------------------------~n"
+      " * Writing line coverage analysis to ~s~n", [CoverLogDir]),
+
+    lists:foreach(
+      fun(Module) ->
+              analyse_line_coverage(Module, CoverLogDir)
+      end,
+      cover:modules()),
+    io:format(" * Analysis done~n").
+
+analyse_clause_coverage(Module) ->
+    Analysis = cushion_util:untuple(cover:analyse(Module, coverage, clause)),
+    {Covered, NotCovered} =
+        lists:foldl(
+          fun({_, {C, NC}}, {AccC, AccNC}) -> {AccC + C, AccNC + NC} end,
+          {0, 0}, Analysis),
+    Total = Covered + NotCovered,
+    io:format(
+      "~7.2f% ~p (~p/~p)~n", [Covered*100/Total, Module, Covered, Total]).
+
+analyse_line_coverage(Module, CoverLogDir) ->
     cushion_util:untuple(
       cover:analyse_to_file(
         Module,
