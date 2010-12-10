@@ -247,8 +247,6 @@ weight(_From,_To,{call,_,fail_delete_db,_}) ->
     2;
 weight(_From,_To,{call,_,create_doc,_}) ->
     20;
-weight(_From,_To,{call,_,fail_create_doc,_}) ->
-    20;
 weight(_From,_To,{call,_,delete_doc,_}) ->
     30;
 weight(_From,_To,{call,_,fail_delete_doc,_}) ->
