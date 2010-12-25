@@ -21,6 +21,12 @@
 %%% @copyright (C) 2010, Samuel
 %%% @doc Tests for cushion_json
 %%%
+%%% This suite tests that any json term we can construct in the erlang side can
+%%% be serialised to a JSON string and deserialised from it safely.
+%%%
+%%% It doesn't fully test that any JSON string can be deserialised safely, since
+%%% only strings created by the serialiser are tested.
+%%%
 %%% @end
 %%%-------------------------------------------------------------------
 -module(cushion_json_test).
