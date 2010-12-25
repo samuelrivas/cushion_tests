@@ -24,7 +24,12 @@
 %%% @end
 %%%-------------------------------------------------------------------
 -module(cushion_tests).
+
+%% Testing API
 -export([available_tests/0, run_all/2, run_tests/3, run_test/1]).
+
+%% Useful functions for manual testing
+-export([cover_compile_app/1, write_results/1]).
 
 available_tests() ->
     [json, http_api, cushion].
