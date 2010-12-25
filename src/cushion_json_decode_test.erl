@@ -21,8 +21,10 @@
 false() -> terminal(false).
 true() -> terminal(true).
 null() -> terminal(null).
-number() -> terminal(number, eqc_gen:int()).
 string() -> terminal(string, string_gen()).
+digit() -> terminal(digit, in_intervals([{$0, $9}])).
+digit19() -> terminal(digit19, in_intervals([{$1, $9}])).
+zero() -> terminal(zero).
 
 terminal(Terminal) ->
     {Terminal, eqc_gen:nat()}.
@@ -45,18 +47,14 @@ in_intervals(Intervals) ->
 print(Toks) ->
     [tok2string(Tok) || Tok <- Toks].
 
-tok2string([]) ->
-    "";
-tok2string({false, _}) ->
-    "false";
-tok2string({true, _}) ->
-    "true";
-tok2string({null, _}) ->
-    "null";
-tok2string({number, N, _}) ->
-    integer_to_list(N);
-tok2string({string, S, _}) ->
-    [$", S, $"].
+tok2string([]) -> "";
+tok2string({false, _}) -> "false";
+tok2string({true, _}) -> "true";
+tok2string({null, _}) -> "null";
+tok2string({string, S, _}) -> [$", S, $"];
+tok2string({digit, N, _}) -> N;
+tok2string({digit19, N, _}) -> N;
+tok2string({zero, _}) -> $0.
 
 %%%-------------------------------------------------------------------
 %%% Properties

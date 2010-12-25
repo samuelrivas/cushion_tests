@@ -1,14 +1,19 @@
-Nonterminals Value.
+Nonterminals Value Int.
 
-Terminals false null true string number.
+Terminals false null true string digit digit19 zero
 
 Rootsymbol Value.
 
 Endsymbol '$end'.
 
-Value -> false : false.
-Value -> null : null.
-Value -> true : true.
-Value -> string : list_to_binary('$1').
-Value -> number: '$1'.
+Value -> false.
+Value -> null.
+Value -> true.
+Value -> string.
+Value -> Int.
 
+Int -> zero.
+Int -> digit19 Digits.
+
+Digits -> digit.
+Digits -> digit Digits.
