@@ -1,6 +1,6 @@
-Nonterminals Value Int.
+Nonterminals Value Int Number Minus.
 
-Terminals false null true string digit digit19 zero
+Terminals false null true string digit digit19 zero minus
 
 Rootsymbol Value.
 
@@ -10,7 +10,12 @@ Value -> false.
 Value -> null.
 Value -> true.
 Value -> string.
-Value -> Int.
+Value -> Number.
+
+Number -> Minus Int.
+
+Minus -> '$empty'.
+Minus -> minus.
 
 Int -> zero.
 Int -> digit19 Digits.

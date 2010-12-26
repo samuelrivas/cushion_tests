@@ -25,6 +25,8 @@ string() -> terminal(string, string_gen()).
 digit() -> terminal(digit, in_intervals([{$0, $9}])).
 digit19() -> terminal(digit19, in_intervals([{$1, $9}])).
 zero() -> terminal(zero).
+minus() -> terminal(minus).
+'$empty'() -> terminal(empty).
 
 terminal(Terminal) ->
     {Terminal, eqc_gen:nat()}.
@@ -55,7 +57,9 @@ tok2string({null, _}) -> "null";
 tok2string({string, S, _}) -> [$", S, $"];
 tok2string({digit, N, _}) -> N;
 tok2string({digit19, N, _}) -> N;
-tok2string({zero, _}) -> $0.
+tok2string({zero, _}) -> $0;
+tok2string({minus, _}) -> $-;
+tok2string({empty, _}) -> [].
 
 %%%-------------------------------------------------------------------
 %%% Properties
