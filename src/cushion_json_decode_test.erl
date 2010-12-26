@@ -41,6 +41,8 @@ zero() -> terminal(zero).
 minus() -> terminal(minus).
 '$empty'() -> terminal(empty).
 decimal_point() -> terminal(decimal_point).
+exp() -> terminal(exp, eqc_gen:elements([$E, $e])).
+plus() -> terminal(plus).
 
 terminal(Terminal) ->
     {Terminal, eqc_gen:nat()}.
@@ -64,7 +66,7 @@ in_intervals(Intervals) ->
 print(Toks) ->
     [tok2string(Tok) || Tok <- Toks].
 
-tok2string([]) -> "";
+tok2string({empty, _}) -> [];
 tok2string({false, _}) -> "false";
 tok2string({true, _}) -> "true";
 tok2string({null, _}) -> "null";
@@ -74,7 +76,8 @@ tok2string({digit19, N, _}) -> N;
 tok2string({zero, _}) -> $0;
 tok2string({minus, _}) -> $-;
 tok2string({decimal_point, _}) -> $.;
-tok2string({empty, _}) -> [].
+tok2string({exp, Exp, _}) -> Exp;
+tok2string({plus, _}) -> $+.
 
 %%%-------------------------------------------------------------------
 %%% Properties
