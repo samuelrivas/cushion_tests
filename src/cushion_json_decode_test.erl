@@ -33,10 +33,11 @@ terminal(Terminal, Value) ->
     {Terminal, Value, eqc_gen:nat()}.
 
 string_gen() ->
-    eqc_gen:list(printable()).
+    % eqc_gen:list(printable()).
+    eqc_gen:list(in_intervals([{$a, $z}, {$A, $Z}])).
 
-printable() ->
-    in_intervals([{32, 126}, {8, 13}, {27, 27}]).
+% printable() ->
+%     in_intervals([{32, 126}, {8, 13}, {27, 27}]).
 
 in_intervals(Intervals) ->
     eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
