@@ -16,7 +16,7 @@
 -export([prop_parse/0]).
 
 %% Functions to manually explore symbol values generation
--export([json_value/0, json_number/0]).
+-export([json_value/0, json_number/0, json_string/0]).
 
 %%%-------------------------------------------------------------------
 %%% Debug generators. You can use those to sample pieces of the JSON grammar
@@ -28,13 +28,16 @@ json_value() ->
 json_number() ->
     ?LET(Tree, 'Number'(), lists:flatten(print(eqc_grammar:eval(Tree)))).
 
+json_string() ->
+    ?LET(Tree, 'String'(), lists:flatten(print(eqc_grammar:eval(Tree)))).
+
 %%%-------------------------------------------------------------------
 %%% Terminal generators
 %%%-------------------------------------------------------------------
 false() -> terminal(false).
 true() -> terminal(true).
 null() -> terminal(null).
-string() -> terminal(string, string_gen()).
+character() -> terminal(char, char_gen()).
 digit() -> terminal(digit, in_intervals([{$0, $9}])).
 digit19() -> terminal(digit19, in_intervals([{$1, $9}])).
 zero() -> terminal(zero).
@@ -42,6 +45,7 @@ minus() -> terminal(minus).
 '$empty'() -> terminal(empty).
 decimal_point() -> terminal(decimal_point).
 exp() -> terminal(exp, eqc_gen:elements([$E, $e])).
+quotation_mark() -> terminal(quotation_mark).
 plus() -> terminal(plus).
 
 terminal(Terminal) ->
@@ -50,12 +54,8 @@ terminal(Terminal) ->
 terminal(Terminal, Value) ->
     {Terminal, Value, eqc_gen:nat()}.
 
-string_gen() ->
-    % eqc_gen:list(printable()).
+char_gen() ->
     eqc_gen:list(in_intervals([{$a, $z}, {$A, $Z}])).
-
-% printable() ->
-%     in_intervals([{32, 126}, {8, 13}, {27, 27}]).
 
 in_intervals(Intervals) ->
     eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
@@ -74,9 +74,11 @@ tok2string({string, S, _}) -> [$", S, $"];
 tok2string({digit, N, _}) -> N;
 tok2string({digit19, N, _}) -> N;
 tok2string({zero, _}) -> $0;
-tok2string({minus, _}) -> $-;
+tok2string({char, C, _}) -> C;
+tok2string({quotation_mark, _}) -> $";
 tok2string({decimal_point, _}) -> $.;
 tok2string({exp, Exp, _}) -> Exp;
+tok2string({minus, _}) -> $-;
 tok2string({plus, _}) -> $+.
 
 %%%-------------------------------------------------------------------

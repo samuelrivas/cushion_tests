@@ -1,6 +1,6 @@
-Nonterminals Value Int Number Minus Frac Exp Sign.
+Nonterminals Value Int Number Minus Frac Exp Sign Chars.
 
-Terminals false null true string digit digit19 zero minus plus decimal_point exp
+Terminals false null true digit digit19 zero minus plus decimal_point exp quotation_mark character
 
 Rootsymbol Value.
 
@@ -9,7 +9,7 @@ Endsymbol '$end'.
 Value -> false.
 Value -> null.
 Value -> true.
-Value -> string.
+Value -> String.
 Value -> Number.
 
 Number -> Minus Int Frac Exp.
@@ -32,3 +32,7 @@ Exp -> exp Sign Digits.
 Sign -> '$empty'.
 Sign -> minus.
 Sign -> plus.
+
+String -> quotation_mark Chars quotation_mark.
+Chars -> '$empty'.
+Chars -> character Chars.
