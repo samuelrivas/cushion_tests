@@ -37,13 +37,15 @@ json_string() ->
 false() -> terminal(false).
 true() -> terminal(true).
 null() -> terminal(null).
-character() -> terminal(char, char_gen()).
 digit() -> terminal(digit, in_intervals([{$0, $9}])).
 digit19() -> terminal(digit19, in_intervals([{$1, $9}])).
 zero() -> terminal(zero).
 minus() -> terminal(minus).
 '$empty'() -> terminal(empty).
 decimal_point() -> terminal(decimal_point).
+escape() -> terminal(escape).
+unescaped() -> terminal(unescaped, unescaped_gen()).
+escaped() -> terminal(escaped, escaped_gen()).
 exp() -> terminal(exp, eqc_gen:elements([$E, $e])).
 quotation_mark() -> terminal(quotation_mark).
 plus() -> terminal(plus).
@@ -54,8 +56,13 @@ terminal(Terminal) ->
 terminal(Terminal, Value) ->
     {Terminal, Value, eqc_gen:nat()}.
 
-char_gen() ->
-    eqc_gen:list(in_intervals([{$a, $z}, {$A, $Z}])).
+%% TODO: Finish this
+unescaped_gen() ->
+    in_intervals([{$a, $z}, {$A, $Z}]).
+
+%% TODO: Add unicode characters uXXXX
+escaped_gen() ->
+    eqc_gen:elements([$", $\\, $/, $b, $f, $n, $r, $t]).
 
 in_intervals(Intervals) ->
     eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
@@ -74,9 +81,11 @@ tok2string({string, S, _}) -> [$", S, $"];
 tok2string({digit, N, _}) -> N;
 tok2string({digit19, N, _}) -> N;
 tok2string({zero, _}) -> $0;
-tok2string({char, C, _}) -> C;
 tok2string({quotation_mark, _}) -> $";
 tok2string({decimal_point, _}) -> $.;
+tok2string({escape, _}) -> $\\;
+tok2string({unescaped, C, _}) -> C;
+tok2string({escaped, C, _}) -> C;
 tok2string({exp, Exp, _}) -> Exp;
 tok2string({minus, _}) -> $-;
 tok2string({plus, _}) -> $+.
