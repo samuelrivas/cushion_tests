@@ -56,9 +56,9 @@ terminal(Terminal) ->
 terminal(Terminal, Value) ->
     {Terminal, Value, eqc_gen:nat()}.
 
-%% TODO: Finish this
+%% TODO: Finish this, adding unicode characters from 5d
 unescaped_gen() ->
-    in_intervals([{$a, $z}, {$A, $Z}]).
+    in_intervals([{16#20, 16#21}, {16#23, 16#5b}, {16#5d, 16#ff}]).
 
 %% TODO: Add unicode characters uXXXX
 escaped_gen() ->
