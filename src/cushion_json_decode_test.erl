@@ -15,6 +15,19 @@
 
 -export([prop_parse/0]).
 
+%% Functions to manually explore symbol values generation
+-export([json_value/0, json_number/0]).
+
+%%%-------------------------------------------------------------------
+%%% Debug generators. You can use those to sample pieces of the JSON grammar
+%%% generators
+%%%-------------------------------------------------------------------
+json_value() ->
+    ?LET(Tree, 'Value'(), lists:flatten(print(eqc_grammar:eval(Tree)))).
+
+json_number() ->
+    ?LET(Tree, 'Number'(), lists:flatten(print(eqc_grammar:eval(Tree)))).
+
 %%%-------------------------------------------------------------------
 %%% Terminal generators
 %%%-------------------------------------------------------------------
