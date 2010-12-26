@@ -40,6 +40,7 @@ digit19() -> terminal(digit19, in_intervals([{$1, $9}])).
 zero() -> terminal(zero).
 minus() -> terminal(minus).
 '$empty'() -> terminal(empty).
+decimal_point() -> terminal(decimal_point).
 
 terminal(Terminal) ->
     {Terminal, eqc_gen:nat()}.
@@ -72,6 +73,7 @@ tok2string({digit, N, _}) -> N;
 tok2string({digit19, N, _}) -> N;
 tok2string({zero, _}) -> $0;
 tok2string({minus, _}) -> $-;
+tok2string({decimal_point, _}) -> $.;
 tok2string({empty, _}) -> [].
 
 %%%-------------------------------------------------------------------
