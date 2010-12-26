@@ -86,6 +86,11 @@ prop_parse() ->
     ?FORALL(
        SymExpr, 'Value'(),
        begin
-           cushion_json:json2erl(print(eqc_grammar:eval(SymExpr))),
-           true
+           JsonString = print(eqc_grammar:eval(SymExpr)),
+           ?WHENFAIL(
+              io:format("~nFailed string: '~s'~n", [JsonString]),
+              begin
+                  cushion_json:json2erl(JsonString),
+                  true
+              end)
        end).
