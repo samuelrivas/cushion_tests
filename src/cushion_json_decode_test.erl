@@ -58,12 +58,31 @@ terminal(Terminal, Value) ->
 
 %% TODO: Finish this, adding unicode characters from 5d
 unescaped_gen() ->
-    in_intervals(
-      [{16#20, 16#21}, % !
-       {16#23, 16#5b}, %#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[
-       {16#5d, 16#7e}, %]^_`abcdefghijklmnopqrstuvwxyz{|}~
-       {16#7f, 16#fffd}% cover the whole unicode range supported by erlang
-      ]).
+    eqc_gen:frequency(
+      [
+       %! and white space
+       {3, eqc_gen:choose(16#20, 16#21)},
+
+       % #$%&'()*+,-./:;<=>?@[ numbers and big letters
+       {5, eqc_gen:choose(16#23, 16#5b)},
+
+       % ]^_`{|}~ and small letters
+       {5, eqc_gen:choose(16#5d, 16#7e)},
+
+       % Rest of the unicode range
+       {1, utf8_list()}]).
+
+%% Generate unicode characters beyond 127 already translated to utf-8, since
+%% ktuo won't handle unicode characters
+%%
+utf8_list() ->
+    ?LET(
+       U,
+       ?SUCHTHAT(C, cushion_tests_gen:unicode_char(), C > 16#7e),
+
+       % Tricky way to convert an unicode character to a list representing it in
+       % utf-8
+       binary_to_list(cushion_util:unicode_to_binary([U]))).
 
 %% TODO: Add unicode characters uXXXX
 escaped_gen() ->
