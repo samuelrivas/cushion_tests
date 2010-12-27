@@ -58,7 +58,7 @@ terminal(Terminal, Value) ->
 
 %% TODO: Finish this, adding unicode characters from 5d
 unescaped_gen() ->
-    in_intervals([{16#20, 16#21}, {16#23, 16#5b}, {16#5d, 16#ff}]).
+    in_intervals([{16#20, 16#21}, {16#23, 16#5b}, {16#5d, 16#fffd}]).
 
 %% TODO: Add unicode characters uXXXX
 escaped_gen() ->
@@ -99,7 +99,7 @@ prop_parse() ->
        begin
            JsonString = print(eqc_grammar:eval(SymExpr)),
            ?WHENFAIL(
-              io:format("~nFailed string: '~s'~n", [JsonString]),
+              io:format("~nFailed string: '~ts'~n", [JsonString]),
               try
                   cushion_json:json2erl(JsonString),
                   true
