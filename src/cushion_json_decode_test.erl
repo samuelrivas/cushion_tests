@@ -70,7 +70,7 @@ escaped_gen() ->
     eqc_gen:elements([$", $\\, $/, $b, $f, $n, $r, $t]).
 
 in_intervals(Intervals) ->
-    eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
+    eqc_gen:oneof([eqc_gen:elements(lists:seq(A, B)) || {A, B} <- Intervals]).
 
 %%%-------------------------------------------------------------------
 %%% Printer
