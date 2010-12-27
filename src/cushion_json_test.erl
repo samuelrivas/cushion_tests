@@ -56,7 +56,10 @@ composites(S) ->
     [in_array(S), in_object(S)].
 
 in_string() ->
-    ?LET(S, eqc_gen:list(character()), unicode:characters_to_binary(S)).
+    ?LET(
+       S,
+       eqc_gen:list(cushion_tests_gen:unicode_char()),
+       cushion_util:unicode_to_binary(S)).
 
 in_number() ->
     eqc_gen:oneof([eqc_gen:int(), eqc_gen:real()]).
@@ -105,20 +108,6 @@ remove_dups([{K, V}|T], Ks) ->
     end;
 remove_dups([], _) ->
     [].
-
-%% Auxiliary generators
-character() ->
-    % XXX There is a range of unicode characters, starting in 0xD800 that fail
-    % when calling unicode:characters_to_binary. For some reason I haven't
-    % investigated, higher characters, e.g. up to 0xFFFD that do work again.
-    %
-    % Anyway this generator covers a wide range of unicode characters
-    eqc_gen:oneof(
-      [eqc_gen:choose(0, 31), % There are some non printable characters here
-       eqc_gen:choose(32, 126), % "normal" characters
-       eqc_gen:choose(127, 16#d7ff), % First unicode range after 7 bit chars
-       eqc_gen:choose(16#e000, 16#10ffff) % jump over reserved 0xD800-0xDFFF
-      ]).
 
 field(S, Special) ->
     {field_name(Special), in_value(S)}.
