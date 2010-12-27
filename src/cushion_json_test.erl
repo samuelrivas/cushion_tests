@@ -56,7 +56,7 @@ composites(S) ->
     [in_array(S), in_object(S)].
 
 in_string() ->
-    ?LET(S, eqc_gen:list(printable()), list_to_binary(S)).
+    ?LET(S, eqc_gen:list(character()), unicode:characters_to_binary(S)).
 
 in_number() ->
     eqc_gen:oneof([eqc_gen:int(), eqc_gen:real()]).
@@ -107,11 +107,17 @@ remove_dups([], _) ->
     [].
 
 %% Auxiliary generators
-printable() ->
-    in_intervals([{32, 126}, {8, 13}, {27, 27}]).
-
-in_intervals(Intervals) ->
-    eqc_gen:elements(lists:flatten([lists:seq(A, B) || {A, B} <- Intervals])).
+character() ->
+    % XXX There is a range of unicode characters, starting in 0xD800 that fail
+    % when calling unicode:characters_to_binary. For some reason I haven't
+    % investigated, higher characters, e.g. up to 0xFFFD that do work again.
+    %
+    % Anyway this generator covers a wide range of unicode characters
+    eqc_gen:oneof(
+      [eqc_gen:choose(0, 31), % There are some non printable characters here
+       eqc_gen:choose(32, 126), % "normal" characters
+       eqc_gen:choose(127, 16#d7ff) % Unicode range
+      ]).
 
 field(S, Special) ->
     {field_name(Special), in_value(S)}.
