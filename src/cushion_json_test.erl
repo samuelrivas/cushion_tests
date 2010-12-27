@@ -116,7 +116,8 @@ character() ->
     eqc_gen:oneof(
       [eqc_gen:choose(0, 31), % There are some non printable characters here
        eqc_gen:choose(32, 126), % "normal" characters
-       eqc_gen:choose(127, 16#d7ff) % Unicode range
+       eqc_gen:choose(127, 16#d7ff), % First unicode range after 7 bit chars
+       eqc_gen:choose(16#e000, 16#10ffff) % jump over reserved 0xD800-0xDFFF
       ]).
 
 field(S, Special) ->
