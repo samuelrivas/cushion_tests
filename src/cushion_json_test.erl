@@ -55,6 +55,7 @@ terminals() ->
 composites(S) ->
     [in_array(S), in_object(S)].
 
+%% Generate a list of unicode characters and encode it to an utf-8 binary
 in_string() ->
     ?LET(
        S,
