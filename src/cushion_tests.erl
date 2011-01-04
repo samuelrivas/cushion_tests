@@ -29,7 +29,7 @@
 -export([available_tests/0, run_all/2, run_tests/3, run_test/1]).
 
 %% Useful functions for manual testing
--export([cover_compile_app/1, write_results/1]).
+-export([cover_compile_app/1, write_cover_results/1]).
 
 available_tests() ->
     [json, http_api, cushion].
@@ -41,8 +41,8 @@ run_tests(Tests, AppsToCover, CoverLogDir) ->
     cover:reset(),
     lists:foreach(fun cover_compile_app/1, AppsToCover),
     Failed = lists:foldl(fun run_test/2, [], Tests),
-    write_results(CoverLogDir),
-    Failed.
+    write_cover_results(CoverLogDir),
+    report_failed(Failed).
 
 run_test(Test) ->
     run_test(Test, []).
@@ -64,6 +64,27 @@ run_test(json, Failed) ->
 run_test(cushion, Failed) ->
     run_quickcheck(cushion_fsm_test, prop_cushion, Failed).
 
+write_cover_results(CoverLogDir) ->
+    io:format(
+      " * Analysing clause coverage:~n"
+      "--------------------------------------------------~n"),
+    lists:foreach(
+      fun(Module) ->
+              analyse_clause_coverage(Module)
+      end,
+      cover:modules()),
+
+    io:format(
+      "--------------------------------------------------~n"
+      " * Writing line coverage analysis to ~s~n", [CoverLogDir]),
+
+    lists:foreach(
+      fun(Module) ->
+              analyse_line_coverage(Module, CoverLogDir)
+      end,
+      cover:modules()),
+    io:format(" * Analysis done~n").
+
 %%%-------------------------------------------------------------------
 %%% Internals
 %%%-------------------------------------------------------------------
@@ -84,27 +105,6 @@ source_files(App) ->
 %% cover compiling the information in the source field is wrong
 get_src(Module, Src) ->
     filename:join(Src, cushion_util:format("~p.erl", [Module])).
-
-write_results(CoverLogDir) ->
-    io:format(
-      " * Analysing clause coverage:~n"
-      "--------------------------------------------------~n"),
-    lists:foreach(
-      fun(Module) ->
-              analyse_clause_coverage(Module)
-      end,
-      cover:modules()),
-
-    io:format(
-      "--------------------------------------------------~n"
-      " * Writing line coverage analysis to ~s~n", [CoverLogDir]),
-
-    lists:foreach(
-      fun(Module) ->
-              analyse_line_coverage(Module, CoverLogDir)
-      end,
-      cover:modules()),
-    io:format(" * Analysis done~n").
 
 analyse_clause_coverage(Module) ->
     Analysis = cushion_util:untuple(cover:analyse(Module, coverage, clause)),
@@ -138,3 +138,8 @@ run_eunit(Mod, Failed) ->
         error ->
             [Mod | Failed]
     end.
+
+report_failed([]) ->
+    ok;
+report_failed(Failed) ->
+    io:format(" * SOME TESTS FAILED: ~w~n", [Failed]).
