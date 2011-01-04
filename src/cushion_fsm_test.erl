@@ -370,7 +370,7 @@ find_doc(#state{docs = Docs}, Db, {Id, _Vsn}) ->
     find_doc_rec(Docs, Db, Id).
 
 find_doc_rec([], Db, Id) ->
-    erlang:error({not_found, Db, Id});
+    erlang:error({document_not_found, Db, Id});
 find_doc_rec([{Db, {Id, _}, Doc} | _], Db, Id) ->
     Doc;
 find_doc_rec([{_, _, _} | T], Db, Id) ->
@@ -390,7 +390,7 @@ field_equals(A, B) ->
                   {value, {K, V2}} ->
                       value_equals(V, V2);
                   false ->
-                      erlang:error({not_found, K, B})
+                      erlang:error({field_not_found, K, B})
               end
       end,
       A).
