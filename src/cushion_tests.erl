@@ -40,19 +40,38 @@ run_all(AppsToCover, CoverLogDir) ->
 run_tests(Tests, AppsToCover, CoverLogDir) ->
     cover:reset(),
     lists:foreach(fun cover_compile_app/1, AppsToCover),
-    lists:foreach(fun run_test/1, Tests),
-    write_results(CoverLogDir).
+    Failed = lists:foldl(fun run_test/2, [], Tests),
+    write_results(CoverLogDir),
+    Failed.
 
-run_test(http_api) ->
-    cushion_couch_api_test:test();
-run_test(json) ->
+run_test(Test) ->
+    run_test(Test, []).
+
+run_test(http_api, Failed) ->
+    case cushion_couch_api_test:test() of
+        ok ->
+            Failed;
+        error ->
+            [cushion_couch_api_test | Failed]
+    end;
+run_test(json, Failed) ->
     % Run also ktuo tests, just in case (and to get test code covered)
     ktuo_parse_utils:test(),
     ktj_parse:test(),
     ktj_encode:test(),
-    eqc:quickcheck(cushion_json_test:prop_roundtrip());
-run_test(cushion) ->
-    eqc:quickcheck(cushion_fsm_test:prop_cushion()).
+    case eqc:quickcheck(cushion_json_test:prop_roundtrip()) of
+        true ->
+            Failed;
+        false ->
+            [cushion_json_test | Failed]
+    end;
+run_test(cushion, Failed) ->
+    case eqc:quickcheck(cushion_fsm_test:prop_cushion()) of
+        true ->
+            Failed;
+        false ->
+            [cushion_fsm_test | Failed]
+    end.
 
 %%%-------------------------------------------------------------------
 %%% Internals
