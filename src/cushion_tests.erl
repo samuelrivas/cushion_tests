@@ -48,30 +48,19 @@ run_test(Test) ->
     run_test(Test, []).
 
 run_test(http_api, Failed) ->
-    case cushion_couch_api_test:test() of
-        ok ->
-            Failed;
-        error ->
-            [cushion_couch_api_test | Failed]
-    end;
+    run_eunit(cushion_couch_api_test, Failed);
 run_test(json, Failed) ->
     % Run also ktuo tests, just in case (and to get test code covered)
-    ktuo_parse_utils:test(),
-    ktj_parse:test(),
-    ktj_encode:test(),
-    case eqc:quickcheck(cushion_json_test:prop_roundtrip()) of
-        true ->
-            Failed;
-        false ->
-            [cushion_json_test | Failed]
-    end;
+    run_eunit(
+      ktuo_parse_utils,
+      run_eunit(
+        ktj_parse,
+        run_eunit(
+          ktj_encode,
+          run_quickcheck(
+            cushion_json_test, prop_roundtrip, Failed))));
 run_test(cushion, Failed) ->
-    case eqc:quickcheck(cushion_fsm_test:prop_cushion()) of
-        true ->
-            Failed;
-        false ->
-            [cushion_fsm_test | Failed]
-    end.
+    run_quickcheck(cushion_fsm_test, prop_cushion, Failed).
 
 %%%-------------------------------------------------------------------
 %%% Internals
@@ -131,3 +120,19 @@ analyse_line_coverage(Module, CoverLogDir) ->
         Module,
         filename:join(CoverLogDir, cushion_util:format("~p.html", [Module])),
         [html])).
+
+run_quickcheck(Mod, Prop, Failed) ->
+    case eqc:quickcheck(Mod:Prop()) of
+        true ->
+            Failed;
+        false ->
+            [Mod | Failed]
+    end.
+
+run_eunit(Mod, Failed) ->
+    case Mod:test() of
+        ok ->
+            Failed;
+        error ->
+            [Mod | Failed]
+    end.
