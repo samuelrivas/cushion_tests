@@ -58,7 +58,9 @@ run_test(json, Failed) ->
         run_eunit(
           ktj_encode,
           run_quickcheck(
-            cushion_json_test, prop_roundtrip, Failed))));
+            cushion_json_test, prop_roundtrip,
+            run_quickcheck(
+              cushion_json_decode_test, prop_parse, Failed)))));
 run_test(cushion, Failed) ->
     run_quickcheck(cushion_fsm_test, prop_cushion, Failed).
 
