@@ -84,9 +84,17 @@ utf8_list() ->
        % utf-8
        binary_to_list(cushion_util:unicode_to_binary([U]))).
 
-%% TODO: Add unicode characters uXXXX
 escaped_gen() ->
-    eqc_gen:elements([$", $\\, $/, $b, $f, $n, $r, $t]).
+    eqc_gen:oneof(
+      [eqc_gen:elements([$", $\\, $/, $b, $f, $n, $r, $t]), u_encoded()]).
+
+%% TODO: Add characters from u10000
+u_encoded() ->
+    ?LET(
+       C,
+       ?SUCHTHAT(U , cushion_tests_gen:unicode_char(), U < 16#1000),
+       io_lib:format("u~4.16.0B", [C])).
+
 
 in_intervals(Intervals) ->
     eqc_gen:oneof([eqc_gen:elements(lists:seq(A, B)) || {A, B} <- Intervals]).
