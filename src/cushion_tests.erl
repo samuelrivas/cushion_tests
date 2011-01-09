@@ -124,11 +124,18 @@ analyse_line_coverage(Module, CoverLogDir) ->
         [html])).
 
 run_quickcheck(Mod, Prop, Failed) ->
-    case eqc:quickcheck(Mod:Prop()) of
+    FormerFlag = process_flag(trap_exit, true),
+    try eqc:quickcheck(Mod:Prop()) of
         true ->
             Failed;
         false ->
             [Mod | Failed]
+    catch
+        X:Y ->
+            io:format("~n~p:~p() failed -- ~w:~w~n~n", [Mod, Prop, X, Y]),
+            [Mod | Failed]
+    after
+        process_flag(trap_exit, FormerFlag)
     end.
 
 run_eunit(Mod, Failed) ->
