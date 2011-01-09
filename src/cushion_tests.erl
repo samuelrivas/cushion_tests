@@ -32,7 +32,7 @@
 -export([cover_compile_app/1, write_cover_results/1]).
 
 available_tests() ->
-    [json, http_api, cushion].
+    [json, http_api, cushion, cushion_util].
 
 run_all(AppsToCover, CoverLogDir) ->
     run_tests(available_tests(), AppsToCover, CoverLogDir).
@@ -62,7 +62,9 @@ run_test(json, Failed) ->
             run_quickcheck(
               cushion_json_decode_test, prop_parse, Failed)))));
 run_test(cushion, Failed) ->
-    run_quickcheck(cushion_fsm_test, prop_cushion, Failed).
+    run_quickcheck(cushion_fsm_test, prop_cushion, Failed);
+run_test(cushion_util, Failed) ->
+    run_quickcheck_module(cushion_util_tests, Failed).
 
 write_cover_results(CoverLogDir) ->
     io:format(
@@ -137,6 +139,10 @@ run_quickcheck(Mod, Prop, Failed) ->
     after
         process_flag(trap_exit, FormerFlag)
     end.
+
+run_quickcheck_module(Mod, Failed) ->
+    Fail = eqc:module(Mod),
+    Fail ++ Failed.
 
 run_eunit(Mod, Failed) ->
     case Mod:test() of
