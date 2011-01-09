@@ -311,7 +311,7 @@ catch_error(F) ->
 %%%-------------------------------------------------------------------
 prop_cushion() ->
     Access = default_access(),
-    ExistingDbs = cushion:get_dbs(Access),
+    ExistingDbs = get_existing_dbs(Access),
     ?FORALL(
        DbNames, db_names(ExistingDbs),
        ?FORALL(
@@ -320,14 +320,19 @@ prop_cushion() ->
             ?MODULE, {ready, #state{db_names = DbNames, access = Access}}),
 
           begin
-              {H,S,Res} = run_commands(?MODULE,Cmds),
-              restore_dbs(ExistingDbs),
-              aggregate(
-                eqc_statem:zip(
-                  eqc_fsm:state_names(H),eqc_statem:command_names(Cmds)),
-                ?WHENFAIL(
-                   io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
-                   Res == ok))
+              Apps = cushion_util:start_app(cushion),
+              try
+                  {H,S,Res} = run_commands(?MODULE,Cmds),
+                  restore_dbs(ExistingDbs),
+                  aggregate(
+                    eqc_statem:zip(
+                      eqc_fsm:state_names(H),eqc_statem:command_names(Cmds)),
+                    ?WHENFAIL(
+                       io:format("History: ~p\nState: ~p\nRes: ~p\n",[H,S,Res]),
+                       Res == ok))
+              after
+                  cushion_util:stop_apps(Apps)
+              end
           end)).
 
 %%%-------------------------------------------------------------------
@@ -401,3 +406,11 @@ value_equals(A, A) ->
     true;
 value_equals(A, B) ->
     erlang:error({different, A, B}).
+
+get_existing_dbs(Access) ->
+    Apps = cushion_util:start_app(cushion),
+    try
+        cushion:get_dbs(Access)
+    after
+        cushion_util:stop_apps(Apps)
+    end.
