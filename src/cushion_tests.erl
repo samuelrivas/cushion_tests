@@ -26,7 +26,8 @@
 -module(cushion_tests).
 
 %% Testing API
--export([available_tests/0, run_all/2, run_tests/3, run_test/1]).
+-export([available_tests/0, run_all/2, run_tests/3, run_test/1,
+         disable_tty_logger/0, enable_tty_logger/0]).
 
 %% Useful functions for manual testing
 -export([cover_compile_app/1, write_cover_results/1]).
@@ -156,3 +157,12 @@ report_failed([]) ->
     ok;
 report_failed(Failed) ->
     io:format(" * SOME TESTS FAILED: ~w~n", [Failed]).
+
+%% Some tests start and stop applications a lot. The standard error logger event
+%% handler logs them to TTY, wiping any useful information out. You can disable
+%% that logger with this function and enable it later
+disable_tty_logger() ->
+    error_logger:delete_report_handler(error_logger_tty_h).
+
+enable_tty_logger() ->
+    error_logger:add_report_handler(error_logger_tty_h).
