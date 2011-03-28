@@ -114,7 +114,7 @@ doc() ->
     ?SUCHTHAT(
        Obj, cushion_json_test:in_object(),
        case Obj of
-           {obj, _} -> true;
+           {struct, _} -> true;
            _ -> false
        end).
 
@@ -379,7 +379,7 @@ find_doc_rec([{_, _, _} | T], Db, Id) ->
 
 %% Compare that all fields in A are in B. This is not reflexive, since B may
 %% have additional special fields, such as _rev or _id
-obj_equals({obj, A}, {obj, B}) ->
+obj_equals({struct, A}, {struct, B}) ->
     field_equals(A, B);
 obj_equals(A, B) ->
     erlang:error({different, A, B}).
@@ -396,8 +396,8 @@ field_equals(A, B) ->
       end,
       A).
 
-value_equals({obj, A}, B) ->
-    obj_equals({obj, A}, B);
+value_equals({struct, A}, B) ->
+    obj_equals({struct, A}, B);
 value_equals(A, A) ->
     true;
 value_equals(A, B) ->

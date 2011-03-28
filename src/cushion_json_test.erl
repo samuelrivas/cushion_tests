@@ -88,7 +88,7 @@ in_object(S, Special) ->
     ?LET(
        Fields, fields(S, Special),
        ?SHRINK(
-          {obj, Fields},
+          {struct, Fields},
           [V || {_K, V} <- Fields] ++ [K || {K, _V} <- Fields])).
 
 fields(S, Special) ->
