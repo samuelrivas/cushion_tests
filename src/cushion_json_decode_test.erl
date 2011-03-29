@@ -132,12 +132,8 @@ prop_parse() ->
            JsonString = print(eqc_grammar:eval(SymExpr)),
            ?WHENFAIL(
               io:format("~nFailed string: '~ts'~n", [JsonString]),
-              try
+              begin
                   cushion_json:json2erl(JsonString),
                   true
-              catch
-                  {bad_float, _F} ->
-                      % XXX check that the exponent is grater than 309
-                      true
               end)
        end).

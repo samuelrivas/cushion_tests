@@ -26,8 +26,12 @@ Digits -> digit Digits.
 Frac -> '$empty'.
 Frac -> decimal_point Digits.
 
+%% For exponent I couldn't find a way to restrict to result to exponents smaller
+%% than 309 (which would fail when converted to float) so I just restricted the
+%% grammar to two digit exponents
 Exp -> '$empty'.
-Exp -> exp Sign Digits.
+Exp -> exp Sign digit.
+Exp -> exp Sign digit digit.
 
 Sign -> '$empty'.
 Sign -> minus.
