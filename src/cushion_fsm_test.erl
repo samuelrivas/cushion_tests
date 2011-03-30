@@ -114,10 +114,8 @@ doc() ->
     ?SUCHTHAT(
        Obj, cushion_json_test:in_object(),
        case Obj of
-           {obj, _} ->
-               true;
-           _ ->
-               false
+           {obj, _} -> true;
+           _ -> false
        end).
 
 get_all_refs(#state{dbs_and_docs = DbsAndDocs}) ->
@@ -126,10 +124,8 @@ get_all_refs(#state{dbs_and_docs = DbsAndDocs}) ->
 
 get_db_docs(#state{dbs_and_docs = DbsAndDocs}, Db) ->
     case lists:keysearch(Db, 1, DbsAndDocs) of
-        {value, {Db, Docs}} ->
-            Docs;
-        false ->
-            []
+        {value, {Db, Docs}} -> Docs;
+        false -> []
     end.
 
 %%%-------------------------------------------------------------------
