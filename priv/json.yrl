@@ -6,40 +6,40 @@ Rootsymbol Value.
 
 Endsymbol '$end'.
 
-Value -> false.
-Value -> null.
-Value -> true.
-Value -> String.
-Value -> Number.
+Value -> false : nil.
+Value -> null : nil.
+Value -> true : nil.
+Value -> String : nil.
+Value -> Number : nil.
 
-Number -> Minus Int Frac Exp.
+Number -> Minus Int Frac Exp : nil.
 
-Minus -> '$empty'.
-Minus -> minus.
+Minus -> '$empty' : nil.
+Minus -> minus : nil.
 
-Int -> zero.
-Int -> digit19 Digits.
+Int -> zero : nil.
+Int -> digit19 Digits : nil.
 
-Digits -> digit.
-Digits -> digit Digits.
+Digits -> digit : nil.
+Digits -> digit Digits : nil.
 
-Frac -> '$empty'.
-Frac -> decimal_point Digits.
+Frac -> '$empty' : nil.
+Frac -> decimal_point Digits : nil.
 
 %% For exponent I couldn't find a way to restrict to result to exponents smaller
 %% than 309 (which would fail when converted to float) so I just restricted the
 %% grammar to two digit exponents
-Exp -> '$empty'.
-Exp -> exp Sign digit.
-Exp -> exp Sign digit digit.
+Exp -> '$empty' : nil.
+Exp -> exp Sign digit : nil.
+Exp -> exp Sign digit digit : nil.
 
-Sign -> '$empty'.
-Sign -> minus.
-Sign -> plus.
+Sign -> '$empty' : nil.
+Sign -> minus : nil.
+Sign -> plus : nil.
 
-String -> quotation_mark Chars quotation_mark.
-Chars -> '$empty'.
-Chars -> Char Chars.
+String -> quotation_mark Chars quotation_mark : nil.
+Chars -> '$empty' : nil.
+Chars -> Char Chars : nil.
 
-Char -> unescaped.
-Char -> escape escaped.
+Char -> unescaped : nil.
+Char -> escape escaped : nil.
