@@ -16,7 +16,7 @@
 -export([prop_parse/0]).
 
 %% Functions to manually explore symbol values generation
--export([json_value/0, json_number/0, json_string/0]).
+-export([json_value/0, json_number/0, json_string/0, json_object/0]).
 
 %%%-------------------------------------------------------------------
 %%% Debug generators. You can use those to sample pieces of the JSON grammar
@@ -30,6 +30,9 @@ json_number() ->
 
 json_string() ->
     ?LET(Tree, 'String'(), lists:flatten(print(eqc_grammar:eval(Tree)))).
+
+json_object() ->
+    ?LET(Tree, 'Object'(), lists:flatten(print(eqc_grammar:eval(Tree)))).
 
 %%%-------------------------------------------------------------------
 %%% Terminal generators
@@ -49,6 +52,10 @@ escaped() -> terminal(escaped, escaped_gen()).
 exp() -> terminal(exp, eqc_gen:elements([$E, $e])).
 quotation_mark() -> terminal(quotation_mark).
 plus() -> terminal(plus).
+left_curl() -> terminal(left_curl).
+right_curl() -> terminal(right_curl).
+colon() -> terminal(colon).
+comma() -> terminal(comma).
 
 terminal(Terminal) ->
     {Terminal, eqc_gen:nat()}.
@@ -120,7 +127,11 @@ tok2string({unescaped, C, _}) -> C;
 tok2string({escaped, C, _}) -> C;
 tok2string({exp, Exp, _}) -> Exp;
 tok2string({minus, _}) -> $-;
-tok2string({plus, _}) -> $+.
+tok2string({plus, _}) -> $+;
+tok2string({left_curl, _}) -> ${;
+tok2string({right_curl, _}) -> $};
+tok2string({colon, _}) -> $:;
+tok2string({comma, _}) -> $,.
 
 %%%-------------------------------------------------------------------
 %%% Properties

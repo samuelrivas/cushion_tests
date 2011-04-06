@@ -1,6 +1,6 @@
-Nonterminals Value Int Number Minus Frac Exp Sign Chars Char.
+Nonterminals Value Int Number Minus Frac Exp Sign Chars Char Object Field Fields
 
-Terminals false null true digit digit19 zero minus plus decimal_point exp quotation_mark unescaped escape escaped.
+Terminals false null true digit digit19 zero minus plus decimal_point exp quotation_mark unescaped escape escaped left_curl right_curl colon comma.
 
 Rootsymbol Value.
 
@@ -11,6 +11,7 @@ Value -> null : nil.
 Value -> true : nil.
 Value -> String : nil.
 Value -> Number : nil.
+Value -> Object : nil.
 
 Number -> Minus Int Frac Exp : nil.
 
@@ -43,3 +44,11 @@ Chars -> Char Chars : nil.
 
 Char -> unescaped : nil.
 Char -> escape escaped : nil.
+
+Object -> left_curl right_curl : nil.
+Object -> left_curl Fields right_curl : nil.
+
+Fields -> Field : nil.
+Fields -> Field comma Fields : nil.
+
+Field -> String colon Value : nil.
