@@ -20,6 +20,7 @@ Minus -> '$empty' : nil.
 Minus -> minus : nil.
 
 Int -> zero : nil.
+Int -> digit19 : nil.
 Int -> digit19 Digits : nil.
 
 Digits -> digit : nil.
