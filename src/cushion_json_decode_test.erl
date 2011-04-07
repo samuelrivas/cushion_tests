@@ -41,33 +41,27 @@ json_array() ->
 %%%-------------------------------------------------------------------
 %%% Terminal generators
 %%%-------------------------------------------------------------------
-false() -> terminal(false).
-true() -> terminal(true).
-null() -> terminal(null).
-digit() -> terminal(digit, in_intervals([{$0, $9}])).
-digit19() -> terminal(digit19, in_intervals([{$1, $9}])).
-zero() -> terminal(zero).
-minus() -> terminal(minus).
-'$empty'() -> terminal(empty).
-decimal_point() -> terminal(decimal_point).
-escape() -> terminal(escape).
-unescaped() -> terminal(unescaped, unescaped_gen()).
-escaped() -> terminal(escaped, escaped_gen()).
-exp() -> terminal(exp, eqc_gen:elements([$E, $e])).
-quotation_mark() -> terminal(quotation_mark).
-plus() -> terminal(plus).
-left_curl() -> terminal(left_curl).
-right_curl() -> terminal(right_curl).
-left_bracket() -> terminal(left_bracket).
-right_bracket() -> terminal(right_bracket).
-colon() -> terminal(colon).
-comma() -> terminal(comma).
-
-terminal(Terminal) ->
-    Terminal.
-
-terminal(Terminal, Value) ->
-    {Terminal, Value}.
+false() -> false.
+true() -> true.
+null() -> null.
+digit() -> {digit, in_intervals([{$0, $9}])}.
+digit19() -> {digit19, in_intervals([{$1, $9}])}.
+zero() -> zero.
+minus() -> minus.
+'$empty'() -> empty.
+decimal_point() -> decimal_point.
+escape() -> escape.
+unescaped() -> {unescaped, unescaped_gen()}.
+escaped() -> {escaped, escaped_gen()}.
+exp() -> {exp, eqc_gen:elements([$E, $e])}.
+quotation_mark() -> quotation_mark.
+plus() -> plus.
+left_curl() -> left_curl.
+right_curl() -> right_curl.
+left_bracket() -> left_bracket.
+right_bracket() -> right_bracket.
+colon() -> colon.
+comma() -> comma.
 
 %% TODO: Finish this, adding unicode characters from 5d
 unescaped_gen() ->
