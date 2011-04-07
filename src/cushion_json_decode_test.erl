@@ -64,10 +64,10 @@ colon() -> terminal(colon).
 comma() -> terminal(comma).
 
 terminal(Terminal) ->
-    {Terminal, eqc_gen:nat()}.
+    Terminal.
 
 terminal(Terminal, Value) ->
-    {Terminal, Value, eqc_gen:nat()}.
+    {Terminal, Value}.
 
 %% TODO: Finish this, adding unicode characters from 5d
 unescaped_gen() ->
@@ -118,28 +118,28 @@ in_intervals(Intervals) ->
 print(Toks) ->
     [tok2string(Tok) || Tok <- Toks].
 
-tok2string({empty, _}) -> [];
-tok2string({false, _}) -> "false";
-tok2string({true, _}) -> "true";
-tok2string({null, _}) -> "null";
-tok2string({string, S, _}) -> [$", S, $"];
-tok2string({digit, N, _}) -> N;
-tok2string({digit19, N, _}) -> N;
-tok2string({zero, _}) -> $0;
-tok2string({quotation_mark, _}) -> $";
-tok2string({decimal_point, _}) -> $.;
-tok2string({escape, _}) -> $\\;
-tok2string({unescaped, C, _}) -> C;
-tok2string({escaped, C, _}) -> C;
-tok2string({exp, Exp, _}) -> Exp;
-tok2string({minus, _}) -> $-;
-tok2string({plus, _}) -> $+;
-tok2string({left_curl, _}) -> ${;
-tok2string({right_curl, _}) -> $};
-tok2string({left_bracket, _}) -> $[;
-tok2string({right_bracket, _}) -> $];
-tok2string({colon, _}) -> $:;
-tok2string({comma, _}) -> $,.
+tok2string(empty) -> [];
+tok2string(false) -> "false";
+tok2string(true) -> "true";
+tok2string(null) -> "null";
+tok2string({string, S}) -> [$", S, $"];
+tok2string({digit, N}) -> N;
+tok2string({digit19, N}) -> N;
+tok2string(zero) -> $0;
+tok2string(quotation_mark) -> $";
+tok2string(decimal_point) -> $.;
+tok2string(escape) -> $\\;
+tok2string({unescaped, C}) -> C;
+tok2string({escaped, C}) -> C;
+tok2string({exp, Exp}) -> Exp;
+tok2string(minus) -> $-;
+tok2string(plus) -> $+;
+tok2string(left_curl) -> ${;
+tok2string(right_curl) -> $};
+tok2string(left_bracket) -> $[;
+tok2string(right_bracket) -> $];
+tok2string(colon) -> $:;
+tok2string(comma) -> $,.
 
 %%%-------------------------------------------------------------------
 %%% Properties
