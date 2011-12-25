@@ -2,7 +2,7 @@
  [{description, "Tests for cushion"},
   {vsn, "devel"},
   {modules, [cushion_tests, cushion_fsm_test, cushion_couch_api_test,
-             cushion_json_test, cushion_tests_gen, cushion_util_tests,
+             cushion_json_encode_test, cushion_tests_gen, cushion_util_tests,
 	     cushion_json_decode_test]},
   {registered, []},
   {applications, [kernel, stdlib, cushion, eunit, eqc, tools]},

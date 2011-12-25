@@ -29,7 +29,7 @@
 %%%
 %%% @end
 %%%-------------------------------------------------------------------
--module(cushion_json_test).
+-module(cushion_json_encode_test).
 -include_lib("eqc/include/eqc.hrl").
 -export([prop_roundtrip/0]).
 
