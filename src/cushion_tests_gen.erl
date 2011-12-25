@@ -24,7 +24,7 @@
 %%--------------------------------------------------------------------
 unicode_char() ->
     eqc_gen:frequency(
-      [{5, eqc_gen:choose(0, 31)}, % There are some non printable characters here
+      [{5, eqc_gen:choose(0, 31)}, % Some non printable characters here
        {5, eqc_gen:choose(32, 126)}, % "normal" characters
        {3, eqc_gen:choose(127, 255)},
        {1, eqc_gen:choose(255, 16#d7ff)},  % jump over reserved 0xD800-0xDFFF

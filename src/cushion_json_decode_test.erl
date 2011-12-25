@@ -79,9 +79,7 @@ unescaped_gen() ->
        % Rest of the unicode range
        {1, utf8_list()}]).
 
-%% Generate unicode characters beyond 127 already translated to utf-8, since
-%% ktuo won't handle unicode characters
-%%
+%% Generate unicode characters beyond 127 already translated to utf-8
 utf8_list() ->
     ?LET(
        U,
