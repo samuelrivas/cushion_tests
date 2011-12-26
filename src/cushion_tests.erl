@@ -52,16 +52,10 @@ run_test(http_api, Failed) ->
     run_eunit(cushion_couch_api_test, Failed);
 run_test(json, Failed) ->
     % Run also ktuo tests, just in case (and to get test code covered)
-    run_eunit(
-      ktuo_parse_utils,
-      run_eunit(
-        ktj_parse,
-        run_eunit(
-          ktj_encode,
-          run_quickcheck(
-            cushion_json_encode_test, prop_roundtrip,
-            run_quickcheck(
-              cushion_json_decode_test, prop_parse, Failed)))));
+    run_quickcheck(
+      cushion_json_encode_test, prop_roundtrip,
+      run_quickcheck(
+        cushion_json_decode_test, prop_parse, Failed));
 run_test(cushion, Failed) ->
     run_quickcheck(cushion_fsm_test, prop_cushion, Failed);
 run_test(cushion_util, Failed) ->
