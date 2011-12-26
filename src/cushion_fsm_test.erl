@@ -112,7 +112,7 @@ valid_db_name_chars() ->
 %% Avoid shrink to non-object JSONs
 doc() ->
     ?SUCHTHAT(
-       Obj, cushion_json_test:in_object(),
+       Obj, cushion_json_encode_test:in_object(),
        case Obj of
            {struct, _} -> true;
            _ -> false
