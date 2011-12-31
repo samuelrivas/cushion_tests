@@ -36,10 +36,11 @@ show_static_suite() ->
         binary_to_term(
           cushion_util:untuple(file:read_file(static_suite_file()))),
     io:format(
-      "Next erlang terms pass a round trip json2erlang/erlang2json test:~n"),
+      "Next codepoints pass a roundtrip test "
+      "binary_to_unicode/unicode_to_binary:~n"),
     lists:foreach(
-      fun(Case) -> io:format(" * ~500p~n", [Case]) end,
-      [Case || {_Lines, [Case]} <- Cases]).
+      fun([Case]) -> io:format(" * ~500p~n", [Case]) end,
+      Cases).
 
 test_static_suite() ->
     eqc_suite:run(prop_unicode_roundtrip(), static_suite_file()).
