@@ -151,7 +151,11 @@ show_static_suite() ->
     {feature_based, Cases} =
         binary_to_term(
           cushion_util:untuple(file:read_file(static_suite_file()))),
-    [eqc_grammar:eval(Case) || {_Lines, [Case]} <- Cases].
+    io:format(
+      "Next erlang terms pass a round trip json2erlang/erlang2json test:~n"),
+    lists:foreach(
+      fun(Case) -> io:format(" * ~500p~n", [Case]) end,
+      [Case || {_Lines, [Case]} <- Cases]).
 
 test_static_suite() ->
     eqc_suite:run(prop_roundtrip(), static_suite_file()).
