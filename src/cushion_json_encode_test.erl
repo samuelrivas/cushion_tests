@@ -31,7 +31,8 @@
 %%%-------------------------------------------------------------------
 -module(cushion_json_encode_test).
 -include_lib("eqc/include/eqc.hrl").
--export([prop_roundtrip/0]).
+-export([prop_roundtrip/0, generate_static_suite/0, test_static_suite/0,
+         show_static_suite/0]).
 
 %% Generators used in other tests
 -export([in_object/0]).
@@ -135,3 +136,30 @@ prop_roundtrip() ->
        V,
        in_value(),
        eqc:equals(cushion_json:json2erl(cushion_json:erl2json(V)), V)).
+
+%%%-------------------------------------------------------------------
+%%% Static suites
+%%%-------------------------------------------------------------------
+generate_static_suite() ->
+    Suite =
+        cushion_tests:generate_qc_suite(eqc:numtests(1000, prop_roundtrip())),
+    eqc_suite:write(static_suite_file(), Suite).
+
+%% XXX This method uses implementation details of QuickCheck, it might stop
+%% working in future releases of it
+show_static_suite() ->
+    {feature_based, Cases} =
+        binary_to_term(
+          cushion_util:untuple(file:read_file(static_suite_file()))),
+    [eqc_grammar:eval(Case) || {_Lines, [Case]} <- Cases].
+
+test_static_suite() ->
+    eqc_suite:run(prop_roundtrip(), static_suite_file()).
+
+%%%-------------------------------------------------------------------
+%%% Internals
+%%%-------------------------------------------------------------------
+
+static_suite_file() ->
+    filename:join(
+      code:priv_dir(cushion_tests), "json_encode_prop_roundtrip.suite").
