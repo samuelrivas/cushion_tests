@@ -27,7 +27,7 @@
 
 %% Testing API
 -export([available_tests/0, run_all/2, run_tests/3, run_test/1,
-         disable_tty_logger/0, enable_tty_logger/0]).
+         disable_tty_logger/0, enable_tty_logger/0, generate_qc_suite/1]).
 
 %% Useful functions for manual testing
 -export([cover_compile_app/1, write_cover_results/1]).
@@ -82,21 +82,34 @@ write_cover_results(CoverLogDir) ->
       cover:modules()),
     io:format(" * Analysis done~n").
 
+generate_qc_suite(Prop) ->
+    cover:stop(),
+    cover_compile_app(cushion),
+    cover_compile_files(
+      source_files(code:lib_dir(mochiweb, src), [mochijson2, mochinum])),
+    eqc_suite:feature_based(eqc_suite:line_coverage(cover:modules(), Prop)).
+
 %%%-------------------------------------------------------------------
 %%% Internals
 %%%-------------------------------------------------------------------
 cover_compile_app(App) ->
     io:format("Cover-compiling ~p:~n", [App]),
+    cover_compile_files(source_files(App)).
+
+cover_compile_files(Files) ->
     lists:foreach(
       fun(File) ->
               io:format(" * cover-compiling ~s~n", [File]),
               cushion_util:untuple(cover:compile(File))
       end,
-      source_files(App)).
+      Files).
 
 source_files(App) ->
-    Src = code:lib_dir(App, src),
-    [get_src(Module, Src) || Module <- cushion_util:app_modules(App)].
+    AppSrc = code:lib_dir(App, src),
+    source_files(AppSrc, cushion_util:app_modules(App)).
+
+source_files(AppSrc, Modules) ->
+    [get_src(Module, AppSrc) || Module <- Modules].
 
 %% XXX This could be done more elegantly using Module:module_info, but after
 %% cover compiling the information in the source field is wrong
