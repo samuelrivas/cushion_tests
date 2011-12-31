@@ -13,7 +13,8 @@
 -compile({parse_transform, eqc_grammar}).
 -eqc_grammar({yecc_tokens, "../priv/json.yrl"}).
 
--export([prop_parse/0]).
+-export([prop_parse/0, generate_static_suite/0, test_static_suite/0,
+         show_static_suite/0]).
 
 %% Functions to manually explore symbol values generation
 -export([json_value/0, json_number/0, json_string/0, json_object/0,
@@ -148,3 +149,33 @@ prop_parse() ->
                   true
               end)
        end).
+
+%%%-------------------------------------------------------------------
+%%% Static suites
+%%%-------------------------------------------------------------------
+generate_static_suite() ->
+    Suite = cushion_tests:generate_qc_suite(eqc:numtests(1000, prop_parse())),
+    file:write_file(static_suite_file(), term_to_binary(Suite)).
+
+%% XXX This method uses implementation details of QuickCheck, it might stop
+%% working in future releases of it
+show_static_suite() ->
+    {feature_based, Cases} =
+        binary_to_term(
+          cushion_util:untuple(file:read_file(static_suite_file()))),
+    TokenLists = [eqc_grammar:eval(Case) || {_Lines, [Case]} <- Cases],
+    io:format(
+      "Next terms can be translated to Erlang without raising exceptions:~n"),
+    lists:foreach(
+      fun(Tokens) -> io:format(" * ~s~n", [print(Tokens)]) end,
+      TokenLists).
+
+test_static_suite() ->
+    true.
+
+%%%-------------------------------------------------------------------
+%%% Internals
+%%%-------------------------------------------------------------------
+
+static_suite_file() ->
+    filename:join(code:priv_dir(cushion_tests), "json_decode_prop_parse.suite").
