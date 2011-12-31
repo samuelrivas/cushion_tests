@@ -171,7 +171,7 @@ show_static_suite() ->
       TokenLists).
 
 test_static_suite() ->
-    true.
+    eqc_suite:run(prop_parse(), static_suite_file()).
 
 %%%-------------------------------------------------------------------
 %%% Internals
