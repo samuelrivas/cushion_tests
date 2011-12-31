@@ -338,7 +338,7 @@ prop_cushion() ->
 generate_static_suite() ->
     Suite =
         cushion_tests:generate_qc_suite(
-          eqc:numtests(50, prop_cushion()), [mochijson2, mochinum]),
+          eqc:numtests(100, prop_cushion()), [mochijson2, mochinum]),
     eqc_suite:write(static_suite_file(), Suite).
 
 %% XXX This method uses implementation details of QuickCheck, it might stop
@@ -347,7 +347,7 @@ show_static_suite() ->
     {feature_based, Cases} =
         binary_to_term(
           cushion_util:untuple(file:read_file(static_suite_file()))),
-    Cases.
+    [Case || {_Lines, Case} <- Cases].
 
 test_static_suite() ->
     eqc_suite:run(prop_cushion(), static_suite_file()).
