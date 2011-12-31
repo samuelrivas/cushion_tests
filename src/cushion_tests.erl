@@ -27,7 +27,8 @@
 
 %% Testing API
 -export([available_tests/0, run_all/2, run_tests/3, run_test/1,
-         disable_tty_logger/0, enable_tty_logger/0, generate_qc_suite/1]).
+         disable_tty_logger/0, enable_tty_logger/0, generate_qc_suite/1,
+         generate_qc_suite/2]).
 
 %% Useful functions for manual testing
 -export([cover_compile_app/1, write_cover_results/1]).
@@ -83,11 +84,15 @@ write_cover_results(CoverLogDir) ->
     io:format(" * Analysis done~n").
 
 generate_qc_suite(Prop) ->
+    generate_qc_suite(Prop, []).
+
+generate_qc_suite(Prop, ModuleBlackList) ->
     cover:stop(),
     cover_compile_app(cushion),
     cover_compile_files(
       source_files(code:lib_dir(mochiweb, src), [mochijson2, mochinum])),
-    eqc_suite:feature_based(eqc_suite:line_coverage(cover:modules(), Prop)).
+    eqc_suite:feature_based(
+      eqc_suite:line_coverage(cover:modules() -- ModuleBlackList, Prop)).
 
 %%%-------------------------------------------------------------------
 %%% Internals

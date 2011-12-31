@@ -43,7 +43,8 @@
          fail_delete_doc/2, get_doc/2]).
 
 %% Public API
--export([prop_cushion/0]).
+-export([prop_cushion/0, generate_static_suite/0, test_static_suite/0,
+         show_static_suite/0]).
 
 -include_lib("eqc/include/eqc.hrl").
 -include_lib("eqc/include/eqc_fsm.hrl").
@@ -332,6 +333,26 @@ prop_cushion() ->
           end)).
 
 %%%-------------------------------------------------------------------
+%%% Static suites
+%%%-------------------------------------------------------------------
+generate_static_suite() ->
+    Suite =
+        cushion_tests:generate_qc_suite(
+          eqc:numtests(50, prop_cushion()), [mochijson2, mochinum]),
+    eqc_suite:write(static_suite_file(), Suite).
+
+%% XXX This method uses implementation details of QuickCheck, it might stop
+%% working in future releases of it
+show_static_suite() ->
+    {feature_based, Cases} =
+        binary_to_term(
+          cushion_util:untuple(file:read_file(static_suite_file()))),
+    Cases.
+
+test_static_suite() ->
+    eqc_suite:run(prop_cushion(), static_suite_file()).
+
+%%%-------------------------------------------------------------------
 %%% Internals
 %%%-------------------------------------------------------------------
 default_host() ->
@@ -410,3 +431,7 @@ get_existing_dbs(Access) ->
     after
         cushion_util:stop_apps(Apps)
     end.
+
+static_suite_file() ->
+    filename:join(
+      code:priv_dir(cushion_tests), "cushion_fsm_prop_fsm.suite").
