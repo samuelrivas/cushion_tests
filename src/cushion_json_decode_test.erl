@@ -155,7 +155,7 @@ prop_parse() ->
 %%%-------------------------------------------------------------------
 generate_static_suite() ->
     Suite = cushion_tests:generate_qc_suite(eqc:numtests(1000, prop_parse())),
-    file:write_file(static_suite_file(), term_to_binary(Suite)).
+    eqc_suite:write(static_suite_file(), Suite).
 
 %% XXX This method uses implementation details of QuickCheck, it might stop
 %% working in future releases of it
